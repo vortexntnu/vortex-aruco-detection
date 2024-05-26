@@ -1,0 +1,43 @@
+
+aruco_detector_node:
+  ros__parameters:
+    camera_frame: "camera_link"
+
+    # Flir camera
+    subs:
+      image_topic: "/flir_camera/image_raw"
+      camera_info_topic: "/flir_camera/camera_info"
+
+    # Flir camera
+    camera:  
+      intrinsic: [1050.0, 1050.0, 960.0, 540.0] # fx, fy, cx, cy
+      distortion: [-0.356890438215317, 0.168613819658546, 0.0, 0.0, -0.0441848241077346] # k1, k2, p1, p2, k3
+
+    detect_board: true  # Set to true to detect aruco boards
+    visualize: true  # Set to true to visualize the detected markers and board
+
+      # TAC ARUCO PARAMETERS
+    aruco:
+      # marker_size: 0.150
+      dictionary: "DICT_5X5_100"
+    
+
+    #TAC ARUCO BOARD PARAMETERS
+    # board:
+    #   xDist: 0.430
+    #   yDist: 0.830
+    #   ids: [28, 7, 96, 19]
+    # marker_size: 0.150
+
+    # Vortex docking plate
+    board:
+      xDist: 0.462
+      yDist: 0.862
+      ids: [28, 7, 96, 19]
+    aruco:
+      marker_size: 0.167
+
+    models:
+      dynmod_stddev: 0.01
+      sendmod_stddev: 0.01
+
