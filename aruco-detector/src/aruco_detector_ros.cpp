@@ -1,5 +1,6 @@
 #include <aruco_detector/aruco_detector_ros.hpp>
 #include <sstream>
+#include <filesystem>
 #include <aruco_detector/aruco_file_logger.hpp>
 #include <rclcpp_components/register_node_macro.hpp>
 
@@ -391,7 +392,16 @@ void aruco_detector::ArucoDetectorNode::imageCallback(const sensor_msgs::msg::Im
             new_id = true;
         }
         if (new_id) {
-            writeIntsToFile("detected_markers" + time + ".csv", ids_detected_);
+             // Define the directory path
+            std::string directory = "detected-aruco-markers/";
+            
+            // Check if the directory exists, if not, create it
+            if (!std::filesystem::exists(directory)) {
+                std::filesystem::create_directory(directory);
+            }
+            
+            // Write to the file in the specified directory
+            writeIntsToFile(directory + "detected_markers" + time + ".csv", ids_detected_);
         }
         cv::Vec3d rvec = rvecs[i];
         cv::Vec3d tvec = tvecs[i];
