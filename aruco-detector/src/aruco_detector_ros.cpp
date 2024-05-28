@@ -22,11 +22,11 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions & options) : Node
     this->declare_parameter<bool>("detect_board", true);
     this->declare_parameter<bool>("visualize", true);
 
-    this->declare_parameter<float>("aruco.marker_size", 0.167);
-    this->declare_parameter<std::string>("aruco.dictionary", "DICT_5X5_250");
+    this->declare_parameter<float>("aruco.marker_size", 0.150);
+    this->declare_parameter<std::string>("aruco.dictionary", "DICT_ARUCO_ORIGINAL");
 
-    this->declare_parameter<float>("board.xDist", 0.462);
-    this->declare_parameter<float>("board.yDist", 0.862);
+    this->declare_parameter<float>("board.xDist", 0.430);
+    this->declare_parameter<float>("board.yDist", 0.830);
     std::vector<int64_t> board_ids = {28, 7, 96, 19};
     this->declare_parameter("board.ids", board_ids);
 
@@ -424,11 +424,6 @@ void aruco_detector::ArucoDetectorNode::imageCallback(const sensor_msgs::msg::Im
             cv::aruco::drawAxis(input_image, camera_matrix_, distortion_coefficients_, rvecs[i], tvecs[i], 0.1);
         }
 
-        // if(detect_board_){
-        //     // Draw the board axis
-        //     float length = cv::norm(board_->objPoints[0][0] - board_->objPoints[0][1]); // Visual length of the drawn axis
-	    //     cv::aruco::drawAxis(input_image, camera_matrix_, distortion_coefficients_, board_rvec, board_tvec, length);
-        // }
         auto message = cv_bridge::CvImage(msg->header, "bgr8", input_image).toImageMsg();
 
 

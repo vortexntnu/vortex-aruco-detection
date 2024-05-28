@@ -18,8 +18,8 @@ aruco_detector_node:
 
       # TAC ARUCO PARAMETERS
     aruco:
-      # marker_size: 0.150
-      dictionary: "DICT_5X5_100"
+      marker_size: 0.150
+      dictionary: "DICT_ARUCO_ORIGINAL"
     
 
     #TAC ARUCO BOARD PARAMETERS
@@ -34,8 +34,8 @@ aruco_detector_node:
       xDist: 0.462
       yDist: 0.862
       ids: [28, 7, 96, 19]
-    aruco:
-      marker_size: 0.167
+    # aruco:
+    #   marker_size: 0.167
 
     models:
       dynmod_stddev: 0.01
