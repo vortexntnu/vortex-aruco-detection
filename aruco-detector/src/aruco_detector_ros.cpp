@@ -365,9 +365,12 @@ void aruco_detector::ArucoDetectorNode::imageCallback(const sensor_msgs::msg::Im
             std::vector<int> recovered_candidates = aruco_detector_->refineBoardMarkers(input_image_gray, marker_corners, marker_ids, rejected_candidates, board_);
 
             if(visualize_ && valid > 0){
-            // Draw the board axis
-            float length = cv::norm(board_->objPoints[0][0] - board_->objPoints[0][1]); // Visual length of the drawn axis
-	        cv::aruco::drawAxis(input_image, camera_matrix_, distortion_coefficients_, board_rvec, board_tvec, length);
+                // Draw the board axis
+                float length = cv::norm(board_->objPoints[0][0] - board_->objPoints[0][1]); // Visual length of the drawn axis
+                // Only draw board axis if in front of the camera
+                if(board_tvec[2] > 0.1){
+                    cv::aruco::drawAxis(input_image, camera_matrix_, distortion_coefficients_, board_rvec, board_tvec, length);
+                }
             }
         }
         else 
