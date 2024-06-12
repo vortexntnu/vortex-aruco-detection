@@ -388,24 +388,46 @@ void aruco_detector::ArucoDetectorNode::imageCallback(const sensor_msgs::msg::Im
     for (size_t i = 0; i < marker_ids.size(); i++)
     {
         int id = marker_ids[i];
+        if(id == 0){
+            continue;
+        }
+        id_detection_counter_[id]+=1;
+
         bool new_id = false;
         static std::string time = ros2TimeToString(msg->header.stamp);
-        if (std::find(ids_detected_.begin(), ids_detected_.end(), id) == ids_detected_.end()) {
-            ids_detected_.push_back(id);
+
+        // If the id is not already in ids_detected_, add it
+        if (std::find(ids_detected_once_.begin(), ids_detected_once_.end(), id) == ids_detected_once_.end()) {
+            ids_detected_once_.push_back(id);
             new_id = true;
-        }
-        if (new_id) {
-             // Define the directory path
-            std::string directory = "detected-aruco-markers/";
-            
+            // Define the directory path
+            if(new_id){
+            std::string directory = "detected-aruco-markers-stream/";
+
             // Check if the directory exists, if not, create it
             if (!std::filesystem::exists(directory)) {
                 std::filesystem::create_directory(directory);
             }
-            
+
             // Write to the file in the specified directory
-            writeIntsToFile(directory + "detected_markers" + time + ".csv", ids_detected_);
+            writeIntsToFile(directory + "detected_markers" + time + ".csv", ids_detected_once_);
+            }
         }
+        // Check if this id has been detected five times
+        if (id_detection_counter_[id] == 5) {
+            ids_detected_secure_.push_back(id);
+            // Define the directory path
+            std::string directory_secure = "detected-aruco-markers-unique/";
+
+            // Check if the directory_secure exists, if not, create it
+            if (!std::filesystem::exists(directory_secure)) {
+                std::filesystem::create_directory(directory_secure);
+            }
+
+            // Write to the file in the specified directory_secure
+            writeIntsToFile(directory_secure + "detected_markers" + time + ".csv", ids_detected_secure_);
+        }
+     
         cv::Vec3d rvec = rvecs[i];
         cv::Vec3d tvec = tvecs[i];
         tf2::Quaternion quat = rvec_to_quat(rvec);

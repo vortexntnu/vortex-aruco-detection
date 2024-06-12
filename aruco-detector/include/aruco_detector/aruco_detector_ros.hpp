@@ -266,7 +266,9 @@ private:
     float marker_size_;
     float xDist_,yDist_;
     std::vector<int64_t> ids_;
-    std::vector<int> ids_detected_;
+    std::vector<int> ids_detected_once_;
+    std::vector<int> ids_detected_secure_;
+    std::unordered_map<int,int> id_detection_counter_;
     cv::Ptr<cv::aruco::Dictionary> dictionary_;
     std::string frame_;
     cv::Ptr<cv::aruco::DetectorParameters> detector_params_;
