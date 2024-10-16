@@ -16,7 +16,6 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <Eigen/Dense>
-#include <vortex_filtering/vortex_filtering.hpp>
 
 #include <cv_bridge/cv_bridge.h>
 
@@ -118,16 +117,6 @@ private:
     void initializeBoard();
 
     /**
-     * @brief Initializes dynamic and sensor models with std_dev from ros params
-    */
-    void initializeModels();
-
-    /**
-     * @brief Function to toggle the kalman filter on/off, based on detect_board ros param and if the timer is active
-    */
-    void toggleKalmanFilterCallback();
-
-    /**
      * @brief Check and subscribe to camera topics if not yet subscribed. Allows for dynaminc reconfiguration of camera topics.
      * If new topics are set, the old subscriptions are cancelled and new ones are bound to the callback functions.
      * 
@@ -191,12 +180,6 @@ private:
     void cameraInfoCallback(const sensor_msgs::msg::CameraInfo::SharedPtr msg);
 
     /**
-     * @brief Timer callback function for the kalman filter to estimate the board pose.
-     *  Gives a more stable output of board pose benefitial for control applications.
-    */
-    void kalmanFilterCallback();
-
-    /**
      * @brief Function to convert a rotation vector to a quaternion
     */
     tf2::Quaternion rvec_to_quat(const cv::Vec3d &rvec);
@@ -206,55 +189,7 @@ private:
     */
     geometry_msgs::msg::PoseStamped cv_pose_to_ros_pose_stamped(const cv::Vec3d &tvec, const tf2::Quaternion &quat, std::string frame_id, rclcpp::Time stamp);
 
-
-    using DynMod = vortex::models::IdentityDynamicModel<6>;
-    using SensMod = vortex::models::IdentitySensorModel<6,6>;
-    using EKF = vortex::filter::EKF<DynMod, SensMod>;
-
-    enum class BoardDetectionStatus{
-        BOARD_NEVER_DETECTED,
-        MEASUREMENT_AVAILABLE,
-        MEASUREMENT_NOT_AVAILABLE,
-    };
-
-    /**
-     * @brief Struct to store the board pose, status and timestamp using in kalmanFilterCallback function.
-    */
-    struct BoardPoseStamp{
-    std::tuple<BoardDetectionStatus, Vector6d, rclcpp::Time> getBoardPoseStamp() const {
-        return {board_detection_status_, board_pose_meas_, stamp_};
-    }
-
-    /**
-     * @brief Sets the board status. Used when board is not detected 
-     * to set status to MEASUREMENT_NOT_AVAILABLE
-     *  
-     * 
-     * @param status The board status
-    */
-    void setBoardStatus(BoardDetectionStatus status) {
-        board_detection_status_ = status;
-    }
     
-    /**
-     * @brief Sets all variables of the struct simultaneously to ensure thread safety
-     *      when retrieved in kalmanFilterCallback.
-     *  
-     * 
-     * 
-     * @param values A tuple containing the board status, pose and timestamp
-    */
-    void setBoardPoseStamp(const std::tuple<BoardDetectionStatus, Vector6d, rclcpp::Time>& values) {
-        board_detection_status_ = std::get<0>(values);
-        board_pose_meas_ = std::get<1>(values);
-        stamp_ = std::get<2>(values);
-    }
-    
-    private:
-        BoardDetectionStatus board_detection_status_ = BoardDetectionStatus::BOARD_NEVER_DETECTED;
-        Vector6d board_pose_meas_ = Vector6d::Zero(6); 
-        rclcpp::Time stamp_;
-    };
     
     std::unique_ptr<ArucoDetector> aruco_detector_;
 
@@ -273,10 +208,6 @@ private:
     std::string frame_;
     cv::Ptr<cv::aruco::DetectorParameters> detector_params_;
     cv::Ptr<cv::aruco::Board> board_;
-    BoardPoseStamp board_measurement_;
-    std::shared_ptr<DynMod> dynamic_model_;
-    std::shared_ptr<SensMod> sensor_model_;
-    vortex::prob::Gauss<6> board_pose_est_;
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::TimerBase::SharedPtr timeout_timer_;
     std::string image_topic_;

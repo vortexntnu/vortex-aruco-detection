@@ -46,7 +46,6 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions & options) : Node
 
     if(detect_board_){
     initializeBoard();
-    initializeModels();
     }
     
     setFrame();
@@ -59,8 +58,6 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions & options) : Node
     marker_image_pub_ = this->create_publisher<sensor_msgs::msg::Image>("/aruco_marker_image", qos_sensor_data);
 
     board_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/aruco_board_pose", qos_sensor_data);
-    
-    toggleKalmanFilterCallback();
 
     initializeParameterHandler();
 }
@@ -188,22 +185,6 @@ void ArucoDetectorNode::initializeBoard() {
     board_ = aruco_detector_->createRectangularBoard(marker_size_, xDist_, yDist_, dictionary_, ids_);
 }
 
-void ArucoDetectorNode::initializeModels() {
-    double dynmod_stddev = this->get_parameter("models.dynmod_stddev").as_double();
-    double sensmod_stddev = this->get_parameter("models.sensmod_stddev").as_double();
-
-    dynamic_model_ = std::make_shared<DynMod>(dynmod_stddev);
-    sensor_model_ = std::make_shared<SensMod>(sensmod_stddev);
-}
-
-void ArucoDetectorNode::toggleKalmanFilterCallback() {
-    if (detect_board_ && !timer_) { // If detection is enabled and timer is not already running
-        timer_ = this->create_wall_timer(std::chrono::milliseconds(10), std::bind(&ArucoDetectorNode::kalmanFilterCallback, this));
-    } else if (!detect_board_ && timer_) { // If detection is disabled, stop and reset the timer
-        timer_.reset(); // Stops and destroys the timer
-    }
-}
-
 void ArucoDetectorNode::setFrame() {
     frame_ = this->get_parameter("camera_frame").as_string();
 }
@@ -242,7 +223,6 @@ void ArucoDetectorNode::onParameterEvent(const rcl_interfaces::msg::ParameterEve
         else if (changed_parameter.name.find("detect_board") == 0) detect_board_changed = true;
         else if (changed_parameter.name.find("board.") == 0) board_changed = true;
         else if (changed_parameter.name.find("camera.") == 0) camera_changed = true;
-        else if (changed_parameter.name.find("models.") == 0) initializeModels();
         else if (changed_parameter.name.find("camera_frame") == 0) setFrame();
         else if (changed_parameter.name.find("subs.") == 0) checkAndSubscribeToCameraTopics();     
     }
@@ -254,9 +234,7 @@ void ArucoDetectorNode::onParameterEvent(const rcl_interfaces::msg::ParameterEve
         setBoardDetection();
         if(detect_board_){
         initializeBoard();
-        initializeModels();
         }
-        toggleKalmanFilterCallback();
     }
     if (aruco_changed && detect_board_) {
         initializeBoard();
@@ -268,38 +246,6 @@ void ArucoDetectorNode::onParameterEvent(const rcl_interfaces::msg::ParameterEve
         setCameraParams();
         initializeDetector();
     }
-}
-
-void aruco_detector::ArucoDetectorNode::kalmanFilterCallback()
-{
-    static rclcpp::Time previous_time = this->now();
-    rclcpp::Time current_time = this->now();
-    rclcpp::Duration time_since_previous_callback = current_time - previous_time;
-    previous_time = current_time;
-
-    auto [status, board_pose_meas, stamp] = board_measurement_.getBoardPoseStamp();
-    switch(status) {
-    case BoardDetectionStatus::BOARD_NEVER_DETECTED:
-        return;
-    case BoardDetectionStatus::MEASUREMENT_AVAILABLE:
-        std::tie(board_pose_est_, std::ignore, std::ignore) = EKF::step(*dynamic_model_, *sensor_model_, time_since_previous_callback.seconds(),board_pose_est_, board_pose_meas);
-        break;
-    case BoardDetectionStatus::MEASUREMENT_NOT_AVAILABLE:
-        std::tie(board_pose_est_, std::ignore) = EKF::predict(*dynamic_model_, *sensor_model_, time_since_previous_callback.seconds(), board_pose_est_);
-        break;
-    }
-    cv::Vec3d rvec,tvec;
-    tvec[0] = board_pose_est_.mean()(0);
-    tvec[1] = board_pose_est_.mean()(1);
-    tvec[2] = board_pose_est_.mean()(2);
-    rvec[0] = board_pose_est_.mean()(3);
-    rvec[1] = board_pose_est_.mean()(4);
-    rvec[2] = board_pose_est_.mean()(5);
-    
-    tf2::Quaternion quat = rvec_to_quat(rvec);
-
-    geometry_msgs::msg::PoseStamped pose_msg = cv_pose_to_ros_pose_stamped(tvec, quat, frame_, stamp);
-    board_pose_pub_->publish(pose_msg);
 }
 
 
@@ -350,17 +296,10 @@ void aruco_detector::ArucoDetectorNode::imageCallback(const sensor_msgs::msg::Im
         
         // valid indicates number of markers used for pose estimation of the board. If valid > 0, a pose has been estimated
         if (valid > 0) {
-            Eigen::Vector<double,6> pose(6);
-            pose << board_tvec[0], board_tvec[1], board_tvec[2], board_rvec[0], board_rvec[1], board_rvec[2];
-
-            // If the board has never been detected before, the estimated pose is set as the measured pose
-            if(std::get<0>(board_measurement_.getBoardPoseStamp()) == BoardDetectionStatus::BOARD_NEVER_DETECTED){
-                board_pose_est_ = {pose,Eigen::Matrix<double,6,6>::Identity()};
-            }
-
-            rclcpp::Time stamp = msg->header.stamp;
-            board_measurement_.setBoardPoseStamp(std::make_tuple(BoardDetectionStatus::MEASUREMENT_AVAILABLE, pose, stamp));
-
+            auto board_quat = rvec_to_quat(board_rvec);
+            geometry_msgs::msg::PoseStamped pose_msg = cv_pose_to_ros_pose_stamped(board_tvec, board_quat, frame_, msg->header.stamp);
+            board_pose_pub_->publish(pose_msg);
+            
             // If board has been detected, check if rejected markers from the board can be recovered
             std::vector<int> recovered_candidates = aruco_detector_->refineBoardMarkers(input_image_gray, marker_corners, marker_ids, rejected_candidates, board_);
 
@@ -372,10 +311,6 @@ void aruco_detector::ArucoDetectorNode::imageCallback(const sensor_msgs::msg::Im
                     cv::aruco::drawAxis(input_image, camera_matrix_, distortion_coefficients_, board_rvec, board_tvec, length);
                 }
             }
-        }
-        else 
-        {
-            board_measurement_.setBoardStatus(BoardDetectionStatus::MEASUREMENT_NOT_AVAILABLE);
         }
     }
     
