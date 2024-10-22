@@ -5,6 +5,7 @@
 #include <rclcpp_components/register_node_macro.hpp>
 
 using std::placeholders::_1;
+using std::placeholders::_2;
 
 namespace vortex {
 namespace aruco_detector {
@@ -35,8 +36,6 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions & options) : Node
 
     setCameraParams();
 
-    checkAndSubscribeToCameraTopics();
-
     setBoardDetection();
 
     initializeDetector();
@@ -57,10 +56,55 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions & options) : Node
 
     marker_image_pub_ = this->create_publisher<sensor_msgs::msg::Image>("/aruco_marker_image", qos_sensor_data);
 
-    board_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/aruco_board_pose", qos_sensor_data);
+    board_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/aruco_board_pose_camera", qos_sensor_data);
 
     initializeParameterHandler();
+
+     // Initialize the action server
+        action_server_ = rclcpp_action::create_server<vortex_msgs::action::LocateDock>(
+            this,
+            "search_dock",
+            std::bind(&ArucoDetectorNode::handleGoal, this, _1, _2),
+            std::bind(&ArucoDetectorNode::handleCancel, this, _1),
+            std::bind(&ArucoDetectorNode::handleAccepted, this, _1)
+        );
 }
+
+rclcpp_action::GoalResponse ArucoDetectorNode::handleGoal(
+    const rclcpp_action::GoalUUID & uuid,
+    std::shared_ptr<const vortex_msgs::action::LocateDock::Goal> goal)
+  {
+    RCLCPP_INFO(this->get_logger(), "Received request to locate dock.");
+    (void)uuid;
+    (void)goal;
+    if (is_executing_action_) {
+        RCLCPP_WARN(this->get_logger(), "Already executing an action, rejecting new goal.");
+        return rclcpp_action::GoalResponse::REJECT;
+    }
+    is_executing_action_ = true;
+    return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+}
+
+rclcpp_action::CancelResponse ArucoDetectorNode::handleCancel(
+    const std::shared_ptr<GoalHandleLocateDock> goal_handle)
+{
+    RCLCPP_INFO(this->get_logger(), "Received request to cancel goal shutting down subscriber.");
+    (void)goal_handle;
+    image_sub_.reset();
+    image_topic_ = "";
+    is_executing_action_ = false;
+    active_goal_handle_.reset();
+    return rclcpp_action::CancelResponse::ACCEPT;
+}
+
+void ArucoDetectorNode::handleAccepted(const std::shared_ptr<GoalHandleLocateDock> goal_handle)
+{
+    RCLCPP_INFO(this->get_logger(), "Goal accepted. Setting up subscriber.");
+    subscribeToImageTopic();
+    is_executing_action_ = true;
+    active_goal_handle_ = goal_handle;
+}
+
 
 void ArucoDetectorNode::setCameraParams(){
     std::vector<double> intrinsic_params = this->get_parameter("camera.intrinsic").as_double_array();
@@ -79,18 +123,24 @@ void ArucoDetectorNode::setCameraParams(){
                                    distortion_params[4]);
 }
 
-void ArucoDetectorNode::checkAndSubscribeToCameraTopics() {
+void ArucoDetectorNode::subscribeToImageTopic() {
     rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
     auto qos_sensor_data = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 1), qos_profile);
 
     std::string image_topic = this->get_parameter("subs.image_topic").as_string();
-    std::string camera_info_topic = this->get_parameter("subs.camera_info_topic").as_string();
     if (image_topic_ != image_topic) {
         image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
             image_topic, qos_sensor_data, std::bind(&ArucoDetectorNode::imageCallback, this, _1));
         image_topic_ = image_topic;
         RCLCPP_INFO(this->get_logger(), "Subscribed to image topic: %s", image_topic.c_str());
     }
+}
+
+void ArucoDetectorNode::subscribeToCameraInfoTopic() {
+    rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
+    auto qos_sensor_data = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 1), qos_profile);
+
+    std::string camera_info_topic = this->get_parameter("subs.camera_info_topic").as_string();
     if (camera_info_topic_ != camera_info_topic) {
         camera_info_sub_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
             camera_info_topic, qos_sensor_data, std::bind(&ArucoDetectorNode::cameraInfoCallback, this, _1));
@@ -111,13 +161,11 @@ void ArucoDetectorNode::cameraInfoCallback(const sensor_msgs::msg::CameraInfo::S
                         0, msg->k[4], msg->k[5],
                         0, 0, 1);
 
-    if (msg->distortion_model == "plumb_bob") {
-        // Map distortion coefficients
-        distortion_coefficients_ = (cv::Mat_<double>(1, 5) << 
-                                       msg->d[0], msg->d[1], 0, 0, msg->d[4]);
-    } else {
-        RCLCPP_WARN(this->get_logger(), "Unsupported distortion model: %s", msg->distortion_model.c_str());
-    }
+    // Map camera matrix (3x3)
+    camera_matrix_ = cv::Mat(3, 3, CV_64F, const_cast<double*>(msg->k.data())).clone();
+
+    // Map distortion coefficients as a row matrix
+    distortion_coefficients_ = cv::Mat(msg->d).reshape(1, 1).clone(); // Reshape to a single row
    
     
      // Correctly using oss for distortion coefficients
@@ -224,7 +272,8 @@ void ArucoDetectorNode::onParameterEvent(const rcl_interfaces::msg::ParameterEve
         else if (changed_parameter.name.find("board.") == 0) board_changed = true;
         else if (changed_parameter.name.find("camera.") == 0) camera_changed = true;
         else if (changed_parameter.name.find("camera_frame") == 0) setFrame();
-        else if (changed_parameter.name.find("subs.") == 0) checkAndSubscribeToCameraTopics();     
+        else if (changed_parameter.name.find("subs.image_topic") == 0) subscribeToImageTopic();
+        else if (changed_parameter.name.find("subs.camera_info_topic") == 0) subscribeToCameraInfoTopic();   
     }
     // Directly invoke initializer functions if their related parameters have changed
     if (aruco_changed) {
@@ -298,8 +347,22 @@ void aruco_detector::ArucoDetectorNode::imageCallback(const sensor_msgs::msg::Im
         if (valid > 0) {
             auto board_quat = rvec_to_quat(board_rvec);
             geometry_msgs::msg::PoseStamped pose_msg = cv_pose_to_ros_pose_stamped(board_tvec, board_quat, frame_, msg->header.stamp);
+
             board_pose_pub_->publish(pose_msg);
-            
+            // Increment the confirmed counter if the board pose has been confirmed
+            if(!confirmed_){
+                confirmed_counter_++;
+                if(confirmed_counter_ == 5){
+                    confirmed_ = true;
+                    confirmed_counter_ = 20;
+                    auto feedback = std::make_shared<vortex_msgs::action::LocateDock::Feedback>();
+                    feedback->confirmed = true;
+                    active_goal_handle_->publish_feedback(feedback);
+                    RCLCPP_INFO(this->get_logger(), "Board pose confirmed.");
+                }
+            }
+
+
             // If board has been detected, check if rejected markers from the board can be recovered
             std::vector<int> recovered_candidates = aruco_detector_->refineBoardMarkers(input_image_gray, marker_corners, marker_ids, rejected_candidates, board_);
 
@@ -310,6 +373,16 @@ void aruco_detector::ArucoDetectorNode::imageCallback(const sensor_msgs::msg::Im
                 if(board_tvec[2] > 0.1){
                     cv::aruco::drawAxis(input_image, camera_matrix_, distortion_coefficients_, board_rvec, board_tvec, length);
                 }
+            }
+        }
+        if(valid < 1 && confirmed_){
+            confirmed_counter_--;
+            if (confirmed_counter_ == 0) {
+                confirmed_ = false;
+                auto feedback = std::make_shared<vortex_msgs::action::LocateDock::Feedback>();
+                feedback->confirmed = false;
+                active_goal_handle_->publish_feedback(feedback);
+                RCLCPP_INFO(this->get_logger(), "Board pose lost.");
             }
         }
     }

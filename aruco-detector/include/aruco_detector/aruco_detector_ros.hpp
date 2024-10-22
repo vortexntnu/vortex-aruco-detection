@@ -17,6 +17,9 @@
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <Eigen/Dense>
 
+#include <rclcpp_action/rclcpp_action.hpp>
+#include <vortex_msgs/action/locate_dock.hpp>
+
 #include <cv_bridge/cv_bridge.h>
 
 #include "aruco_detector.hpp"
@@ -55,6 +58,8 @@ static std::map<std::string, cv::aruco::PREDEFINED_DICTIONARY_NAME> dictionary_m
  */
 class ArucoDetectorNode : public rclcpp::Node{
 
+    using GoalHandleLocateDock = rclcpp_action::ServerGoalHandle<vortex_msgs::action::LocateDock>;
+
 public:
     /**
      * @brief Constructs an ArucoDetectorNode object.
@@ -90,6 +95,17 @@ private:
     */
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr board_pose_pub_;
 
+    rclcpp_action::Server<vortex_msgs::action::LocateDock>::SharedPtr action_server_;
+
+    rclcpp_action::GoalResponse handleGoal(
+        const rclcpp_action::GoalUUID & uuid,
+        std::shared_ptr<const vortex_msgs::action::LocateDock::Goal> goal);
+
+    rclcpp_action::CancelResponse handleCancel(
+        const std::shared_ptr<GoalHandleLocateDock> goal_handle);
+
+    void handleAccepted(const std::shared_ptr<GoalHandleLocateDock> goal_handle);
+
     /**
      * @brief Retrieves initial camera parameters from ros parameters and sets them. 
      * Will most likely be overwritten by params from camera_info topic.
@@ -116,12 +132,9 @@ private:
     */
     void initializeBoard();
 
-    /**
-     * @brief Check and subscribe to camera topics if not yet subscribed. Allows for dynaminc reconfiguration of camera topics.
-     * If new topics are set, the old subscriptions are cancelled and new ones are bound to the callback functions.
-     * 
-    */
-    void checkAndSubscribeToCameraTopics();
+    void subscribeToImageTopic();
+
+    void subscribeToCameraInfoTopic();
 
     /**
      * @brief Set the frame to use for transforms to get correct pose of markers and board.
@@ -189,8 +202,11 @@ private:
     */
     geometry_msgs::msg::PoseStamped cv_pose_to_ros_pose_stamped(const cv::Vec3d &tvec, const tf2::Quaternion &quat, std::string frame_id, rclcpp::Time stamp);
 
-    
-    
+    bool confirmed_;
+    int confirmed_counter_;
+    bool is_executing_action_ = false;
+    std::shared_ptr<GoalHandleLocateDock> active_goal_handle_;
+
     std::unique_ptr<ArucoDetector> aruco_detector_;
 
     cv::Mat camera_matrix_, distortion_coefficients_;

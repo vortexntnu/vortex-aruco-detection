@@ -1,12 +1,14 @@
 
 aruco_detector_node:
   ros__parameters:
-    camera_frame: "camera_link"
+    camera_frame: "Orca/camera_down"
 
     # Flir camera
     subs:
-      image_topic: "/flir_camera/image_raw"
-      camera_info_topic: "/flir_camera/camera_info"
+      # image_topic: "/zed/zed_node/left_raw/image_raw_color"
+      # camera_info_topic: "/zed/zed_node/left_raw/camera_info"
+      image_topic: "/cam_down/image_color"
+      camera_info_topic: "/cam_down/camera_info"
 
     # Flir camera
     camera:  
