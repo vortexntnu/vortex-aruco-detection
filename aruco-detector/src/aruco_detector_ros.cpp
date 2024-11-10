@@ -4,12 +4,19 @@
 #include <aruco_detector/aruco_file_logger.hpp>
 #include <rclcpp_components/register_node_macro.hpp>
 
+
+// vil kjøre en lifecycle til  setCameraParams() og checkAndSubscribeToCameraTopics().
+// vil spare for mye prossesering. Vil også la Auto for kontrollere switchstaten fra active tille ikke, slik at informasjonene blir mottat eller ikke.
+//tilstand som vi vil ha den i er: 
+// - ved start fra unconfigure til Configure, men at den er inactive til vi trenger dataene.
+// - Få staten fra inactive til active, når dronen har sett/lokalisert pipen. 
+
 using std::placeholders::_1;
 
 namespace vortex {
 namespace aruco_detector {
 
-ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions & options) : Node("aruco_detector_node", options)
+ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions & options) : rclcpp_lifecycle::LifecycleNode("aruco_detector_node")
 {
     this->declare_parameter<std::string>("camera_frame", "camera_link");
 
@@ -33,14 +40,9 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions & options) : Node
     this->declare_parameter("models.dynmod_stddev", 0.01);
     this->declare_parameter("models.sensmod_stddev", 0.01);
 
-    setCameraParams();
-
-    checkAndSubscribeToCameraTopics();
-
     setBoardDetection();
 
     initializeDetector();
-
 
     setVisualization();
 
@@ -60,7 +62,69 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions & options) : Node
     board_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/aruco_board_pose", qos_sensor_data);
 
     initializeParameterHandler();
+
 }
+
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  ArucoDetectorNode::on_configure(const rclcpp_lifecycle::State &){
+    RCLCPP_INFO(get_logger(), "Configuring node...");
+
+    setCameraParams();
+    checkAndSubscribeToCameraTopics();
+
+    rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
+        auto qos_sensor_data = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 1), qos_profile);
+
+        marker_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseArray>("/aruco_marker_poses", qos_sensor_data);
+        marker_image_pub_ = this->create_publisher<sensor_msgs::msg::Image>("/aruco_marker_image", qos_sensor_data);
+        board_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/aruco_board_pose", qos_sensor_data);
+
+        return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+}
+
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+    ArucoDetectorNode::on_activate(const rclcpp_lifecycle::State & /* previous_state */)
+    {
+        RCLCPP_INFO(get_logger(), "Activating node...");
+        // Activate publishers
+        marker_pose_pub_->on_activate();
+        marker_image_pub_->on_activate();
+        board_pose_pub_->on_activate();
+        return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+    }
+
+    
+    rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+    ArucoDetectorNode::on_deactivate(const rclcpp_lifecycle::State & /* previous_state */)
+    {
+        RCLCPP_INFO(get_logger(), "Deactivating node...");
+        // Deactivate publishers
+        marker_pose_pub_->on_deactivate();
+        marker_image_pub_->on_deactivate();
+        board_pose_pub_->on_deactivate();
+        return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+    }
+
+
+    rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+    ArucoDetectorNode::on_cleanup(const rclcpp_lifecycle::State & /* previous_state */)
+    {
+        RCLCPP_INFO(get_logger(), "Cleaning up node...");
+        // Clean up resources
+        marker_pose_pub_.reset();
+        marker_image_pub_.reset();
+        board_pose_pub_.reset();
+        return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+    }
+
+    
+    rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+    ArucoDetectorNode::on_shutdown(const rclcpp_lifecycle::State & /* previous_state */)
+    {
+        RCLCPP_INFO(get_logger(), "Shutting down node...");
+        return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+    }
+
 
 void ArucoDetectorNode::setCameraParams(){
     std::vector<double> intrinsic_params = this->get_parameter("camera.intrinsic").as_double_array();
@@ -78,8 +142,9 @@ void ArucoDetectorNode::setCameraParams(){
                                    distortion_params[2], distortion_params[3], 
                                    distortion_params[4]);
 }
+// del opp funksjonen i to, en for image_topic og en for camera_info_topic. !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-void ArucoDetectorNode::checkAndSubscribeToCameraTopics() {
+void ArucoDetectorNode::checkAndSubscribeToImageTopics() {
     rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
     auto qos_sensor_data = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 1), qos_profile);
 
@@ -91,6 +156,24 @@ void ArucoDetectorNode::checkAndSubscribeToCameraTopics() {
         image_topic_ = image_topic;
         RCLCPP_INFO(this->get_logger(), "Subscribed to image topic: %s", image_topic.c_str());
     }
+
+}
+
+void ArucoDetectorNode::checkAndSubscribeToCameraInfoTopics(){
+    rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
+    auto qos_sensor_data = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 1), qos_profile);
+    if (camera_info_topic_ != camera_info_topic) {
+        camera_info_sub_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
+            camera_info_topic, qos_sensor_data, std::bind(&ArucoDetectorNode::cameraInfoCallback, this, _1));
+        camera_info_topic_ = camera_info_topic;
+        RCLCPP_INFO(this->get_logger(), "Subscribed to camera info topic: %s", camera_info_topic.c_str());
+    }
+
+
+    rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
+    auto qos_sensor_data = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 1), qos_profile);
+
+    std::string camera_info_topic = this->get_parameter("subs.camera_info_topic").as_string();
     if (camera_info_topic_ != camera_info_topic) {
         camera_info_sub_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
             camera_info_topic, qos_sensor_data, std::bind(&ArucoDetectorNode::cameraInfoCallback, this, _1));
@@ -98,7 +181,6 @@ void ArucoDetectorNode::checkAndSubscribeToCameraTopics() {
         RCLCPP_INFO(this->get_logger(), "Subscribed to camera info topic: %s", camera_info_topic.c_str());
     }
 }
-
 void ArucoDetectorNode::cameraInfoCallback(const sensor_msgs::msg::CameraInfo::SharedPtr msg) {
     if (msg->k.empty() || msg->d.empty()) {
     RCLCPP_ERROR(this->get_logger(), "Received camera info with empty calibration data.");

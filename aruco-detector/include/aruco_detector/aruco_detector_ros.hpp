@@ -20,6 +20,8 @@
 #include <cv_bridge/cv_bridge.h>
 
 #include "aruco_detector.hpp"
+#include "rclcpp_lifecycle/lifecycle_node.hpp"
+#include "rclcpp_lifecycle/lifecycle_publisher.hpp"
 
 namespace vortex::aruco_detector
 {
@@ -53,7 +55,7 @@ static std::map<std::string, cv::aruco::PREDEFINED_DICTIONARY_NAME> dictionary_m
  * It also provides functionalities for setting camera parameters, initializing the detector, setting visualization options,
  * setting board detection options, initializing the board, initializing the models, and handling parameter events.
  */
-class ArucoDetectorNode : public rclcpp::Node{
+class ArucoDetectorNode : public rclcpp_lifecycle::LifecycleNode{
 
 public:
     /**
@@ -80,17 +82,16 @@ private:
     /**
      * @brief Publishes marker poses as a PoseArray
     */
-    rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr marker_pose_pub_;
+    std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<geometry_msgs::msg::PoseArray>> marker_pose_pub_;
     /**
      * @brief Publishes the image with the markers visualized if visualization param is set. visualizes the board pose if board detection is set.
     */
-    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr marker_image_pub_;
+    std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::Image>> marker_image_pub_;
     /**
      * @brief Publishes the pose of the board
     */
-    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr board_pose_pub_;
-
-    /**
+    std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<geometry_msgs::msg::PoseStamped>> board_pose_pub_;
+  /**
      * @brief Retrieves initial camera parameters from ros parameters and sets them. 
      * Will most likely be overwritten by params from camera_info topic.
     */
@@ -121,7 +122,7 @@ private:
      * If new topics are set, the old subscriptions are cancelled and new ones are bound to the callback functions.
      * 
     */
-    void checkAndSubscribeToCameraTopics();
+    void checkAndSubscribeToImageTopics();
 
     /**
      * @brief Set the frame to use for transforms to get correct pose of markers and board.
@@ -189,8 +190,29 @@ private:
     */
     geometry_msgs::msg::PoseStamped cv_pose_to_ros_pose_stamped(const cv::Vec3d &tvec, const tf2::Quaternion &quat, std::string frame_id, rclcpp::Time stamp);
 
+
+    // Lifecycle state: on_configure
+    rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+    on_configure(const rclcpp_lifecycle::State &);
+        // Lifecycle state: on_activate
+    rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+    on_activate(const rclcpp_lifecycle::State & /* previous_state */);
+
+        // Lifecycle state: on_deactivate
+    rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+    on_deactivate(const rclcpp_lifecycle::State & /* previous_state */);
+  
+    // Lifecycle state: on_cleanup
+    rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+    on_cleanup(const rclcpp_lifecycle::State & /* previous_state */);
     
-    
+    // Lifecycle state: on_shutdown
+    rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+    on_shutdown(const rclcpp_lifecycle::State & /* previous_state */);
+
+
+    void checkAndSubscribeToCameraInfoTopics();
+
     std::unique_ptr<ArucoDetector> aruco_detector_;
 
     cv::Mat camera_matrix_, distortion_coefficients_;
