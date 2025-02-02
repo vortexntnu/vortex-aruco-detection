@@ -356,8 +356,11 @@ void aruco_detector::ArucoDetectorNode::imageCallback(const sensor_msgs::msg::Im
                     confirmed_ = true;
                     confirmed_counter_ = 20;
                     auto feedback = std::make_shared<vortex_msgs::action::LocateDock::Feedback>();
+                    auto result = std::make_shared<vortex_msgs::action::LocateDock::Result>();
                     feedback->confirmed = true;
+                    result->board_pose = pose_msg;
                     active_goal_handle_->publish_feedback(feedback);
+                    active_goal_handle_->succeed(result);
                     RCLCPP_INFO(this->get_logger(), "Board pose confirmed.");
                 }
             }
