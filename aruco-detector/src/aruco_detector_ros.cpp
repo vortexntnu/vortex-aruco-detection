@@ -4,7 +4,9 @@
 #include <aruco_detector/aruco_file_logger.hpp>
 #include <rclcpp_components/register_node_macro.hpp>
 
+
 using std::placeholders::_1;
+using std::placeholders::_2;
 
 namespace vortex {
 namespace aruco_detector {
@@ -21,6 +23,7 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions & options) : Node
 
     this->declare_parameter<bool>("detect_board", true);
     this->declare_parameter<bool>("visualize", true);
+    log_markers_ = this->declare_parameter<bool>("log_markers", true);
 
     this->declare_parameter<float>("aruco.marker_size", 0.150);
     this->declare_parameter<std::string>("aruco.dictionary", "DICT_ARUCO_ORIGINAL");
@@ -41,7 +44,6 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions & options) : Node
 
     initializeDetector();
 
-
     setVisualization();
 
     if(detect_board_){
@@ -59,7 +61,22 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions & options) : Node
 
     board_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/aruco_board_pose", qos_sensor_data);
 
+    log_marker_service_ = this->create_service<std_srvs::srv::SetBool>(
+        "toggle_marker_logging",
+        std::bind(&ArucoDetectorNode::toggleLogging, this, _1, _2)
+    );
+
     initializeParameterHandler();
+}
+
+void ArucoDetectorNode::toggleLogging(
+    const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+    std::shared_ptr<std_srvs::srv::SetBool::Response> response)
+{
+    log_markers_ = request->data;
+    response->success = true;
+    response->message = log_markers_ ? "Marker logging enabled" : "Marker logging disabled";
+    RCLCPP_INFO(this->get_logger(), "%s", response->message.c_str());
 }
 
 void ArucoDetectorNode::setCameraParams(){
@@ -248,65 +265,54 @@ void ArucoDetectorNode::onParameterEvent(const rcl_interfaces::msg::ParameterEve
     }
 }
 
-
 void aruco_detector::ArucoDetectorNode::imageCallback(const sensor_msgs::msg::Image::SharedPtr msg)
 {
-    // RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "Addr of image message aruco: " << msg.get());
-    RCLCPP_INFO_ONCE(this->get_logger(), "Received image message.");
-    cv_bridge::CvImagePtr cv_ptr;
-        cv::Mat input_image_gray;
-        cv::Mat input_image_rgb;
-        cv::Mat input_image;
+    cv::Mat input_image;
+    cv::Mat input_image_gray;
     try
     {
-        cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-
+        // Convert ROS Image to OpenCV format (BGR)
+        auto cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+        
         if (cv_ptr->image.empty()) {
-        RCLCPP_WARN(this->get_logger(), "Empty image received, skipping processing.");
-        return;
+            RCLCPP_WARN(this->get_logger(), "Empty image received, skipping processing.");
+            return;
         }
 
+        // Convert to Grayscale directly
         input_image = cv_ptr->image;
+        cv::cvtColor(input_image, input_image_gray, cv::COLOR_BGR2GRAY);
 
-        // cv::cvtColor(input_image, input_image_rgb, cv::COLOR_RGBA2RGB);
-
-        cv::cvtColor(input_image, input_image_rgb, cv::COLOR_BGR2RGB);
-
-	    cv::cvtColor(input_image_rgb, input_image_gray, cv::COLOR_RGB2GRAY);
-
-    }
-    catch (cv_bridge::Exception &e)
+    } catch (cv_bridge::Exception &e)
     {
         RCLCPP_WARN_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "cv_bridge exception: " << e.what());
         return;
     }
 
-
-    // markers to vector transforms will be done after refineBoardMarkers in case of recovered candidates
     auto [marker_corners, rejected_candidates, marker_ids] = aruco_detector_->detectArucoMarkers(input_image_gray);
 
+    // If no markers are detected, return early
+    if (marker_ids.empty()) {
+        if (visualize_) {
+            auto message = cv_bridge::CvImage(msg->header, "bgr8", input_image).toImageMsg();
+            marker_image_pub_->publish(*message);
+        }
+        return;
+    }
 
-    cv::Vec3d board_rvec, board_tvec;
+    if(detect_board_){
 
-    if(detect_board_ && marker_ids.size() > 0){
-        RCLCPP_INFO_ONCE(this->get_logger(), "Board detection enabled.");
-        // Print marker corners
-        
+        std::vector<int> recovered_candidates = aruco_detector_->refineBoardMarkers(input_image_gray, marker_corners, marker_ids, rejected_candidates, board_);
+    
         auto [valid, board_rvec, board_tvec] = aruco_detector_->estimateBoardPose(marker_corners, marker_ids, board_);
-        
-        // valid indicates number of markers used for pose estimation of the board. If valid > 0, a pose has been estimated
+
         if (valid > 0) {
             auto board_quat = rvec_to_quat(board_rvec);
             geometry_msgs::msg::PoseStamped pose_msg = cv_pose_to_ros_pose_stamped(board_tvec, board_quat, frame_, msg->header.stamp);
             board_pose_pub_->publish(pose_msg);
-            
-            // If board has been detected, check if rejected markers from the board can be recovered
-            std::vector<int> recovered_candidates = aruco_detector_->refineBoardMarkers(input_image_gray, marker_corners, marker_ids, rejected_candidates, board_);
 
-            if(visualize_ && valid > 0){
-                // Draw the board axis
-                float length = cv::norm(board_->objPoints[0][0] - board_->objPoints[0][1]); // Visual length of the drawn axis
-                // Only draw board axis if in front of the camera
+            if(visualize_){
+                float length = cv::norm(board_->objPoints[0][0] - board_->objPoints[0][1]);
                 if(board_tvec[2] > 0.1){
                     cv::aruco::drawAxis(input_image, camera_matrix_, distortion_coefficients_, board_rvec, board_tvec, length);
                 }
@@ -314,7 +320,6 @@ void aruco_detector::ArucoDetectorNode::imageCallback(const sensor_msgs::msg::Im
         }
     }
     
-
     std::vector<cv::Vec3d> rvecs, tvecs;
     cv::aruco::estimatePoseSingleMarkers(marker_corners, marker_size_, camera_matrix_, distortion_coefficients_, rvecs, tvecs);
 
@@ -322,45 +327,16 @@ void aruco_detector::ArucoDetectorNode::imageCallback(const sensor_msgs::msg::Im
 
     for (size_t i = 0; i < marker_ids.size(); i++)
     {
-        int id = marker_ids[i];
-        if(id == 0){
-            continue;
-        }
-        id_detection_counter_[id]+=1;
+        if (log_markers_){
+            int id = marker_ids[i];
 
-        bool new_id = false;
-        static std::string time = ros2TimeToString(msg->header.stamp);
-
-        // If the id is not already in ids_detected_, add it
-        if (std::find(ids_detected_once_.begin(), ids_detected_once_.end(), id) == ids_detected_once_.end()) {
-            ids_detected_once_.push_back(id);
-            new_id = true;
-            // Define the directory path
-            if(new_id){
-            std::string directory = "detected-aruco-markers-stream/";
-
-            // Check if the directory exists, if not, create it
-            if (!std::filesystem::exists(directory)) {
-                std::filesystem::create_directory(directory);
+            // id 0 is blacklisted, too many false positives
+            if(id == 0){
+                continue;
             }
+            static std::string time = ros2TimeToString(msg->header.stamp);
 
-            // Write to the file in the specified directory
-            writeIntsToFile(directory + "detected_markers" + time + ".csv", ids_detected_once_);
-            }
-        }
-        // Check if this id has been detected five times
-        if (id_detection_counter_[id] == 5) {
-            ids_detected_secure_.push_back(id);
-            // Define the directory path
-            std::string directory_secure = "detected-aruco-markers-unique/";
-
-            // Check if the directory_secure exists, if not, create it
-            if (!std::filesystem::exists(directory_secure)) {
-                std::filesystem::create_directory(directory_secure);
-            }
-
-            // Write to the file in the specified directory_secure
-            writeIntsToFile(directory_secure + "detected_markers" + time + ".csv", ids_detected_secure_);
+            log_marker_ids(id, time);
         }
      
         cv::Vec3d rvec = rvecs[i];
@@ -386,12 +362,11 @@ void aruco_detector::ArucoDetectorNode::imageCallback(const sensor_msgs::msg::Im
 
         auto message = cv_bridge::CvImage(msg->header, "bgr8", input_image).toImageMsg();
 
-
         marker_image_pub_->publish(*message);
     }
 }
 
-tf2::Quaternion aruco_detector::ArucoDetectorNode::rvec_to_quat(const cv::Vec3d &rvec) {
+tf2::Quaternion ArucoDetectorNode::rvec_to_quat(const cv::Vec3d &rvec) {
     // Convert rotation vector to rotation matrix
     cv::Mat rmat;
     cv::Rodrigues(rvec, rmat);
@@ -409,7 +384,7 @@ tf2::Quaternion aruco_detector::ArucoDetectorNode::rvec_to_quat(const cv::Vec3d 
     return quaternion;
 }
 
-geometry_msgs::msg::PoseStamped aruco_detector::ArucoDetectorNode::cv_pose_to_ros_pose_stamped(const cv::Vec3d &tvec, const tf2::Quaternion &quat, std::string frame_id, rclcpp::Time stamp) {
+geometry_msgs::msg::PoseStamped ArucoDetectorNode::cv_pose_to_ros_pose_stamped(const cv::Vec3d &tvec, const tf2::Quaternion &quat, std::string frame_id, rclcpp::Time stamp) {
     // create the PoseStamped message
     geometry_msgs::msg::PoseStamped pose_msg;
 
@@ -430,6 +405,44 @@ geometry_msgs::msg::PoseStamped aruco_detector::ArucoDetectorNode::cv_pose_to_ro
 
     // publish the PoseStamped message
     return pose_msg;
+}
+
+void ArucoDetectorNode::log_marker_ids(int id, std::string time) {
+    id_detection_counter_[id]+=1;
+
+    bool new_id = false;
+
+    // If the id is not already in ids_detected_, add it
+    if (std::find(ids_detected_once_.begin(), ids_detected_once_.end(), id) == ids_detected_once_.end()) {
+        ids_detected_once_.push_back(id);
+        new_id = true;
+        // Define the directory path
+        if(new_id){
+        std::string directory = "detected-aruco-markers-stream/";
+
+        // Check if the directory exists, if not, create it
+        if (!std::filesystem::exists(directory)) {
+            std::filesystem::create_directory(directory);
+        }
+
+        // Write to the file in the specified directory
+        writeIntsToFile(directory + "detected_markers" + time + ".csv", ids_detected_once_);
+        }
+    }
+    // Check if this id has been detected five times
+    if (id_detection_counter_[id] == 5) {
+        ids_detected_secure_.push_back(id);
+        // Define the directory path
+        std::string directory_secure = "detected-aruco-markers-unique/";
+
+        // Check if the directory_secure exists, if not, create it
+        if (!std::filesystem::exists(directory_secure)) {
+            std::filesystem::create_directory(directory_secure);
+        }
+
+        // Write to the file in the specified directory_secure
+        writeIntsToFile(directory_secure + "detected_markers" + time + ".csv", ids_detected_secure_);
+    }
 }
 
 RCLCPP_COMPONENTS_REGISTER_NODE(vortex::aruco_detector::ArucoDetectorNode)

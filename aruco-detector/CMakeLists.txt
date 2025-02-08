@@ -21,6 +21,7 @@ find_package(cv_bridge REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(std_srvs REQUIRED)
 
 include_directories(include)
 include_directories(${EIGEN3_INCLUDE_DIR})
@@ -51,6 +52,7 @@ ament_target_dependencies(${LIB_NAME} PUBLIC
   geometry_msgs
   tf2
   cv_bridge
+  std_srvs
 )
 
 rclcpp_components_register_node(

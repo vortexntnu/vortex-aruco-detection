@@ -8,6 +8,7 @@
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include "rclcpp/parameter_event_handler.hpp"
+#include <std_srvs/srv/set_bool.hpp>
 #include <rclcpp/qos.hpp>
 #include <tuple>
 
@@ -128,9 +129,7 @@ private:
     */
     void setFrame();
     
-    /**
-     * @brief Initialize the parameter handler and a parameter event callback.
-     * 
+    /**msg
     */
     void initializeParameterHandler();
     /**
@@ -189,7 +188,13 @@ private:
     */
     geometry_msgs::msg::PoseStamped cv_pose_to_ros_pose_stamped(const cv::Vec3d &tvec, const tf2::Quaternion &quat, std::string frame_id, rclcpp::Time stamp);
 
-    
+    void log_marker_ids(int id, std::string time);
+
+    void toggleLogging(
+    const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+    std::shared_ptr<std_srvs::srv::SetBool::Response> response);
+
+    rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr log_marker_service_;
     
     std::unique_ptr<ArucoDetector> aruco_detector_;
 
@@ -197,6 +202,7 @@ private:
 
     bool detect_board_;
     bool visualize_;
+    bool log_markers_;
 
     float marker_size_;
     float xDist_,yDist_;

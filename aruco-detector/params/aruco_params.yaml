@@ -1,12 +1,12 @@
 
 aruco_detector_node:
   ros__parameters:
-    camera_frame: "camera_link"
+    camera_frame: "Orca/camera_down_frame"
 
     # Flir camera
     subs:
-      image_topic: "/flir_camera/image_raw"
-      camera_info_topic: "/flir_camera/camera_info"
+      image_topic: "/cam_down/image_color"
+      camera_info_topic: "/cam_down/camera_info"
 
     # Flir camera
     camera:  
@@ -15,6 +15,7 @@ aruco_detector_node:
 
     detect_board: true  # Set to true to detect aruco boards
     visualize: true  # Set to true to visualize the detected markers and board
+    log_markers: false  # Set to true to log the detected markers
 
       # TAC ARUCO PARAMETERS
     aruco:

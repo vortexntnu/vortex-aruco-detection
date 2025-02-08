@@ -17,6 +17,7 @@
   <depend>sensor_msgs</depend>
   <depend>image_transport</depend>
   <depend>rclcpp</depend>
+  <depend>std_srvs</depend>
 
 
   <export>
