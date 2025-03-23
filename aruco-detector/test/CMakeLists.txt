@@ -1,7 +1,7 @@
 find_package(ament_cmake_gtest REQUIRED)
-ament_add_gtest(${PROJECT_NAME}_test 
+ament_add_gtest(${PROJECT_NAME}_test
     aruco_detector_test.cpp
-    ../src/aruco_detector.cpp 
+    ../src/aruco_detector.cpp
 )
 target_link_libraries(${PROJECT_NAME}_test
   ${OpenCV_LIBS} # Link OpenCV libraries
