@@ -3,9 +3,9 @@ project(aruco_detector)
 
 # === C++ standard ===
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 20)
+  set(CMAKE_CXX_STANDARD 17)
   endif()
-  
+
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
@@ -21,7 +21,7 @@ find_package(cv_bridge REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(vortex_filtering REQUIRED)
+find_package(std_srvs REQUIRED)
 
 include_directories(include)
 include_directories(${EIGEN3_INCLUDE_DIR})
@@ -52,7 +52,7 @@ ament_target_dependencies(${LIB_NAME} PUBLIC
   geometry_msgs
   tf2
   cv_bridge
-  vortex_filtering
+  std_srvs
 )
 
 rclcpp_components_register_node(
@@ -81,9 +81,5 @@ install(DIRECTORY
   params
   DESTINATION share/${PROJECT_NAME}/
 )
-
-if(BUILD_TESTING)
-    add_subdirectory(test)
-endif()
 
 ament_package()
