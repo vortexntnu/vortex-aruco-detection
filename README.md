@@ -1,4 +1,7 @@
 # ArUco Detector
+[![Industrial CI](https://github.com/vortexntnu/vortex-aruco-detection/actions/workflows/industrial-ci.yml/badge.svg)](https://github.com/vortexntnu/vortex-aruco-detection/actions/workflows/industrial-ci.yml)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/vortexntnu/vortex-aruco-detection/main.svg)](https://results.pre-commit.ci/latest/github/vortexntnu/vortex-aruco-detection/main)
+[![codecov](https://codecov.io/github/vortexntnu/vortex-aruco-detection/graph/badge.svg?token=JesdLrO5Aj)](https://codecov.io/github/vortexntnu/vortex-aruco-detection)
 
 This package provides a detector for ArUco markers in ROS2.
 
