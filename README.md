@@ -8,24 +8,23 @@ This package provides a detector for ArUco markers in ROS2.
 # Subscriptions
 
 ### Image Raw Topic
-Subscipes to a `sensor_msgs::msg::Image` topic specified in the params file. This is the image on which aruco detection is performed.
+Subscripes to a `sensor_msgs::msg::Image` topic specified in the params file. This is the image on which aruco detection is performed.
 
 ### Camera Info Topic
-The node sets default camera calibration parameters, but listens for a `sensor_msgs::msg::CameraInfo` topic to override the calibration parameters.
+Subscribes to a `sensor_msgs::msg::CameraInfo` topic necessary to retrieve the 3d pose of an aruco marker.
 
 
 # Publishers
 
 ### ArUco Marker Poses
-Detects arUco markers on the image. Calculates the position of the markers and publishes over the `/aruco_marker_poses` topic as a `geometry_msgs::msg::PoseArray` message.
+Detects arUco markers on the image. Calculates the position of the markers and publishes poses over the topic as a `geometry_msgs::msg::PoseArray` message.
 
 ### Board Pose
-If the `detect_board` param is set then the board position is published as a `geometry_msgs::msg::PoseStamped` message over the `/aruco_board_pose` topic. The position published is the centre of the rectangular board created in `src/aruco_detector.cpp` in the `createRectangularBoard` function.
+If the `detect_board` param is set then the board position is published as a `geometry_msgs::msg::PoseStamped` message over the board pose topic. The position published is the centre of the rectangular board created in `src/aruco_detector.cpp` in the `createRectangularBoard` function.
 
-The board position is used for autonomous docking in the TAC Challenge. This task requires and accurate position and therefore the board position is etimated through a kalman filter, to ensure more stable outputs.
 
 ### Marker Image
-If the `visualize` param is set the detected arUco markers, and the board centre, if enabled, are visualized on the input image used for detection. The image is published over the `/aruco_marker_image` as a `sensor_msgs::msg::Image` message.
+If the `visualize` param is set the detected arUco markers, and the board centre, if enabled, are visualized on the input image used for detection.
 
 ### Usage
 
@@ -39,12 +38,12 @@ To use the ArUco detector, follow one of these steps:
     ```
 
 
-2. Launch the ArUco detector node to use parameters specified in `params/aruco_parameters.yaml`:
+2. Launch the ArUco detector node to use parameters specified in `config/aruco_detector_params.yaml`:
 
    ```bash
-    ros2 launch aruco_detector aruco_detector_launch.py
+    ros2 launch aruco_detector aruco_detector.launch.py
     ```
 
 ### Configuration
 
-The ArUco detector can be configured by modifying the parameters in the `params/aruco_parameters.yaml` file.
+The ArUco detector can be configured by modifying the parameters in the `config/aruco_detector_params.yaml` file.

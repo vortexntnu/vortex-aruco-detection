@@ -13,8 +13,8 @@ def generate_launch_description():
         parameters=[
             os.path.join(
                 get_package_share_directory('aruco_detector'),
-                'params',
-                'aruco_params.yaml',
+                'config',
+                'aruco_detector_params.yaml',
             )
         ],
         output='screen',
