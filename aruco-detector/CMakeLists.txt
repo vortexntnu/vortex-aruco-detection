@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 project(aruco_detector)
 
-# === C++ standard ===
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
   endif()
@@ -10,7 +9,6 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
@@ -18,10 +16,11 @@ find_package(OpenCV 4.5.4 REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
-find_package(image_transport REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(spdlog REQUIRED)
+find_package(fmt REQUIRED)
 
 include_directories(include)
 include_directories(${EIGEN3_INCLUDE_DIR})
@@ -37,6 +36,7 @@ add_library(${LIB_NAME} SHARED
 target_link_libraries(${LIB_NAME} PUBLIC
   ${OpenCV_LIBS}
   Eigen3::Eigen
+  fmt::fmt
 )
 
 target_include_directories(${LIB_NAME} PUBLIC
@@ -53,11 +53,13 @@ ament_target_dependencies(${LIB_NAME} PUBLIC
   tf2
   cv_bridge
   std_srvs
+  spdlog
+  fmt
 )
 
 rclcpp_components_register_node(
     ${LIB_NAME}
-    PLUGIN "vortex::aruco_detector::ArucoDetectorNode"
+    PLUGIN "ArucoDetectorNode"
     EXECUTABLE ${PROJECT_NAME}_node
 )
 
@@ -78,7 +80,7 @@ install(
 
 install(DIRECTORY
   launch
-  params
+  config
   DESTINATION share/${PROJECT_NAME}/
 )
 

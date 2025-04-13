@@ -1,0 +1,36 @@
+
+/**:
+  ros__parameters:
+
+    subs:
+      image_topic: "/flir_camera/image_raw"
+      camera_info_topic: "/flir_camera/camera_info"
+
+    pubs:
+      aruco_image: "/aruco_detector/image"
+      aruco_poses: "/aruco_detector/markers"
+      board_pose: "/aruco_detector/board"
+
+    logger_service_name: "/toggle_marker_logger"
+
+    detect_board: true  # Set to true to detect aruco boards
+    visualize: true  # Set to true to draw the detected markers and board on the image
+    log_markers: false  # Set to true to log the detected markers
+
+      # TAC ARUCO PARAMETERS
+    aruco:
+      marker_size: 0.150
+      dictionary: "DICT_ARUCO_ORIGINAL"
+
+
+    #TAC ARUCO BOARD PARAMETERS
+    board:
+      xDist: 0.430
+      yDist: 0.830
+      ids: [28, 7, 96, 19]
+
+    # Vortex docking plate
+    # board:
+    #   xDist: 0.462
+    #   yDist: 0.862
+    #   ids: [28, 7, 96, 19]

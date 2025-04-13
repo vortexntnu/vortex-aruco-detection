@@ -3,6 +3,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <spdlog/spdlog.h>
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <rclcpp/qos.hpp>
@@ -10,7 +11,6 @@
 #include <sensor_msgs/msg/image.hpp>
 #include <std_srvs/srv/set_bool.hpp>
 #include <tuple>
-#include "rclcpp/parameter_event_handler.hpp"
 
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
@@ -22,7 +22,6 @@
 
 #include "aruco_detector.hpp"
 
-namespace vortex::aruco_detector {
 using Vector6d = Eigen::Vector<double, 6>;
 
 static std::map<std::string, cv::aruco::PREDEFINED_DICTIONARY_NAME>
@@ -97,82 +96,15 @@ class ArucoDetectorNode : public rclcpp::Node {
         board_pose_pub_;
 
     /**
-     * @brief Retrieves initial camera parameters from ros parameters and sets
-     * them. Will most likely be overwritten by params from camera_info topic.
-     */
-    void setCameraParams();
-
-    /**
      * @brief Initialize the detector. Sets dictionary from ros param. Also
      * initializes detector parameters.
      */
     void initializeDetector();
 
     /**
-     * @brief Sets visualization flag from ros param
-     */
-    void setVisualization();
-
-    /**
-     * @brief Set board detection flag from ros param
-     */
-    void setBoardDetection();
-
-    /**
      * @brief Initializes board from ros params
      */
     void initializeBoard();
-
-    /**
-     * @brief Check and subscribe to camera topics if not yet subscribed. Allows
-     * for dynamic reconfiguration of camera topics. If new topics are set, the
-     * old subscriptions are cancelled and new ones are bound to the callback
-     * functions.
-     *
-     */
-    void checkAndSubscribeToCameraTopics();
-
-    /**
-     * @brief Set the frame to use for transforms to get correct pose of markers
-     * and board.
-     */
-    void setFrame();
-
-    /**msg
-     */
-    void initializeParameterHandler();
-    /**
-     * @brief Callback function for parameter events.
-     * Checks for parameter changes that matches the nodes' namespace and
-     * invokes the relevant initializer functions to update member variables.
-     *
-     * @param event The parameter event.
-     */
-    void onParameterEvent(const rcl_interfaces::msg::ParameterEvent& event);
-
-    /**
-     * @brief Manages parameter events for the node.
-     *
-     * This handle is used to set up a mechanism to listen for and react to
-     * changes in parameters. Parameters can be used to configure the node's
-     * operational behavior dynamically, allowing adjustments without altering
-     * the code. The `param_handler_` is responsible for registering callbacks
-     * that are triggered on parameter changes, providing a centralized
-     * management system within the node for such events.
-     */
-    std::shared_ptr<rclcpp::ParameterEventHandler> param_handler_;
-
-    /**
-     * @brief Handle to the registration of the parameter event callback.
-     *
-     * Represents a token or reference to the specific callback registration
-     * made with the parameter event handler (`param_handler_`). This handle
-     * allows for management of the lifecycle of the callback, such as removing
-     * the callback if it's no longer needed. It ensures that the node can
-     * respond to parameter changes with the registered callback in an efficient
-     * and controlled manner.
-     */
-    rclcpp::ParameterEventCallbackHandle::SharedPtr param_cb_handle_;
 
     /**
      * @brief Callback function for image topic
@@ -202,8 +134,7 @@ class ArucoDetectorNode : public rclcpp::Node {
     geometry_msgs::msg::PoseStamped cv_pose_to_ros_pose_stamped(
         const cv::Vec3d& tvec,
         const tf2::Quaternion& quat,
-        std::string frame_id,
-        rclcpp::Time stamp);
+        const std_msgs::msg::Header& header);
 
     void log_marker_ids(int id, std::string time);
 
@@ -235,7 +166,7 @@ class ArucoDetectorNode : public rclcpp::Node {
     rclcpp::TimerBase::SharedPtr timeout_timer_;
     std::string image_topic_;
     std::string camera_info_topic_;
+    bool camera_info_received_ = false;
 };
-}  // namespace vortex::aruco_detector
 
 #endif  // ARUCO_DETECTOR_ROS_HPP

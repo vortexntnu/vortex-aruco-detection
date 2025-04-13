@@ -1,8 +1,6 @@
 #include <aruco_detector/aruco_detector.hpp>
 #include <iostream>
 
-namespace vortex::aruco_detector {
-
 ArucoDetector::ArucoDetector(
     cv::Ptr<cv::aruco::Dictionary> dict,
     float marker_size,
@@ -111,5 +109,3 @@ std::vector<int> ArucoDetector::refineBoardMarkers(
 
     return recoveredIds;
 }
-
-}  // namespace vortex::aruco_detector

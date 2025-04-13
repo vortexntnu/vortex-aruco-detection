@@ -6,8 +6,6 @@
 #include <opencv2/aruco.hpp>
 #include <opencv2/opencv.hpp>
 
-namespace vortex::aruco_detector {
-
 /**
  * @brief Class for detecting and estimating poses of ArUco markers. Also
  * supports detection of ArUco boards.
@@ -112,7 +110,5 @@ class ArucoDetector {
     cv::Ptr<cv::aruco::DetectorParameters>
         detector_params_; /**< The parameters for the marker detector. */
 };
-
-}  // namespace vortex::aruco_detector
 
 #endif  // ARUCO_DETECTOR_HPP
