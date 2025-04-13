@@ -3,8 +3,8 @@
   ros__parameters:
 
     subs:
-      image_topic: "/flir_camera/image_raw"
-      camera_info_topic: "/flir_camera/camera_info"
+      image_topic: "/image"
+      camera_info_topic: "/camera_info"
 
     pubs:
       aruco_image: "/aruco_detector/image"
