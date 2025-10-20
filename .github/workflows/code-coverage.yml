@@ -9,5 +9,7 @@ on:
 jobs:
   call_reusable_workflow:
     uses: vortexntnu/vortex-ci/.github/workflows/reusable-code-coverage.yml@main
+    with:
+      vcs-repo-file-url: './dependencies.repos'
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
