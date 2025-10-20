@@ -18,6 +18,9 @@
 #include <map>
 #include <string>
 
+#include <vortex_msgs/msg/landmark.hpp>
+#include <vortex_msgs/msg/landmark_array.hpp>
+
 #include <cv_bridge/cv_bridge.h>
 
 #include "aruco_detector.hpp"
@@ -94,6 +97,10 @@ class ArucoDetectorNode : public rclcpp::Node {
      */
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr
         board_pose_pub_;
+    /**
+     * @brief Publishes detected landmarks as a LandmarkArray
+     */
+    rclcpp::Publisher<vortex_msgs::msg::LandmarkArray>::SharedPtr landmark_pub_;
 
     /**
      * @brief Initialize the detector. Sets dictionary from ros param. Also
@@ -151,6 +158,8 @@ class ArucoDetectorNode : public rclcpp::Node {
     bool detect_board_;
     bool visualize_;
     bool log_markers_;
+    bool publish_detections_;
+    bool publish_landmarks_;
 
     float marker_size_;
     float xDist_, yDist_;
