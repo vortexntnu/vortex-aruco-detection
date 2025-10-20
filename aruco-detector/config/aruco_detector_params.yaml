@@ -17,7 +17,7 @@
     detect_board: true  # Set to true to detect aruco boards
     visualize: true  # Set to true to draw the detected markers and board on the image
     log_markers: false  # Set to true to log the detected markers
-    publish_detections: false
+    publish_detections: true
     publish_landmarks: true
 
       # TAC ARUCO PARAMETERS
