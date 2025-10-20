@@ -13,9 +13,9 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions& options)
     visualize_ = this->declare_parameter<bool>("visualize");
     log_markers_ = this->declare_parameter<bool>("log_markers");
     publish_detections_ =
-        this->declare_parameter<bool>("publish_detections", true);
+        this->declare_parameter<bool>("publish_detections");
     publish_landmarks_ =
-        this->declare_parameter<bool>("publish_landmarks", true);
+        this->declare_parameter<bool>("publish_landmarks");
 
     this->declare_parameter<float>("aruco.marker_size");
     this->declare_parameter<std::string>("aruco.dictionary");
