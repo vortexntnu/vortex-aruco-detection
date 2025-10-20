@@ -15,6 +15,7 @@ find_package(rclcpp_components REQUIRED)
 find_package(OpenCV 4.5.4 REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(vortex_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(Eigen3 REQUIRED)
@@ -50,6 +51,7 @@ ament_target_dependencies(${LIB_NAME} PUBLIC
   rclcpp_components
   sensor_msgs
   geometry_msgs
+  vortex_msgs
   tf2
   cv_bridge
   std_srvs

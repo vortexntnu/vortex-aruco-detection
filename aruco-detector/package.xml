@@ -17,6 +17,7 @@
   <depend>std_srvs</depend>
   <depend>tf2</depend>
   <depend>eigen</depend>
+  <depend>vortex_msgs</depend>
 
 
   <export>

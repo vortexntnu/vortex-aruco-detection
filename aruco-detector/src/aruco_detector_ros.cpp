@@ -12,6 +12,10 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions& options)
     detect_board_ = this->declare_parameter<bool>("detect_board");
     visualize_ = this->declare_parameter<bool>("visualize");
     log_markers_ = this->declare_parameter<bool>("log_markers");
+    publish_detections_ =
+        this->declare_parameter<bool>("publish_detections", true);
+    publish_landmarks_ =
+        this->declare_parameter<bool>("publish_landmarks", true);
 
     this->declare_parameter<float>("aruco.marker_size");
     this->declare_parameter<std::string>("aruco.dictionary");
@@ -46,6 +50,9 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions& options)
     std::string board_pose_topic =
         this->declare_parameter<std::string>("pubs.board_pose");
 
+    std::string landmarks_topic =
+        this->declare_parameter<std::string>("pubs.landmarks");
+
     marker_image_pub_ = this->create_publisher<sensor_msgs::msg::Image>(
         aruco_image_topic, qos_sensor_data);
 
@@ -54,6 +61,9 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions& options)
 
     board_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>(
         board_pose_topic, qos_sensor_data);
+
+    landmark_pub_ = this->create_publisher<vortex_msgs::msg::LandmarkArray>(
+        landmarks_topic, qos_sensor_data);
 
     std::string logger_service_name =
         this->declare_parameter<std::string>("logger_service_name");
@@ -154,6 +164,7 @@ void ArucoDetectorNode::imageCallback(
     }
     cv::Mat input_image;
     cv::Mat input_image_gray;
+    vortex_msgs::msg::LandmarkArray landmark_array;
     try {
         auto cv_ptr =
             cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
@@ -201,6 +212,20 @@ void ArucoDetectorNode::imageCallback(
                                             msg->header);
             board_pose_pub_->publish(pose_msg);
 
+            vortex_msgs::msg::Landmark board_landmark;
+            board_landmark.header = msg->header;
+            board_landmark.type = vortex_msgs::msg::Landmark::ARUCO_BOARD;
+            board_landmark.subtype =
+                vortex_msgs::msg::Landmark::ARUCO_BOARD_CAMERA;
+
+            geometry_msgs::msg::PoseWithCovariance board_pose_cov;
+            board_pose_cov.pose = pose_msg.pose;
+            std::fill(board_pose_cov.covariance.begin(),
+                      board_pose_cov.covariance.end(), 0.0);
+            board_landmark.pose = board_pose_cov;
+
+            landmark_array.landmarks.push_back(board_landmark);
+
             if (visualize_) {
                 float length =
                     cv::norm(board_->objPoints[0][0] - board_->objPoints[0][1]);
@@ -221,9 +246,8 @@ void ArucoDetectorNode::imageCallback(
     geometry_msgs::msg::PoseArray pose_array;
 
     for (size_t i = 0; i < marker_ids.size(); i++) {
+        int id = marker_ids[i];
         if (log_markers_) {
-            int id = marker_ids[i];
-
             // id 0 is blacklisted, too many false positives
             if (id == 0) {
                 continue;
@@ -233,17 +257,32 @@ void ArucoDetectorNode::imageCallback(
             log_marker_ids(id, time);
         }
 
-        cv::Vec3d rvec = rvecs[i];
-        cv::Vec3d tvec = tvecs[i];
-        tf2::Quaternion quat = rvec_to_quat(rvec);
+        const cv::Vec3d& rvec = rvecs[i];
+        const cv::Vec3d& tvec = tvecs[i];
+        const tf2::Quaternion quat = rvec_to_quat(rvec);
 
         auto pose_msg = cv_pose_to_ros_pose_stamped(tvec, quat, msg->header);
         pose_array.poses.push_back(pose_msg.pose);
+
+        vortex_msgs::msg::Landmark landmark;
+        landmark.header = msg->header;
+        landmark.type = vortex_msgs::msg::Landmark::ARUCO_MARKER;
+        landmark.subtype = static_cast<uint16_t>(id);
+        geometry_msgs::msg::PoseWithCovariance pose_cov;
+        pose_cov.pose = pose_msg.pose;
+        std::fill(pose_cov.covariance.begin(), pose_cov.covariance.end(), 0.0);
+        landmark.pose = pose_cov;
+        landmark_array.landmarks.push_back(landmark);
     }
 
     pose_array.header = msg->header;
-    marker_pose_pub_->publish(pose_array);
-
+    landmark_array.header = msg->header;
+    if (publish_detections_) {
+        marker_pose_pub_->publish(pose_array);
+    }
+    if (publish_landmarks_ && !landmark_array.landmarks.empty()) {
+        landmark_pub_->publish(landmark_array);
+    }
     if (visualize_) {
         cv::aruco::drawDetectedMarkers(input_image, marker_corners, marker_ids);
         cv::aruco::drawDetectedMarkers(input_image, rejected_candidates,
