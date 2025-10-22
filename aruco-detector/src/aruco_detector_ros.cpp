@@ -7,6 +7,17 @@
 using std::placeholders::_1;
 using std::placeholders::_2;
 
+namespace {
+constexpr int kCovSize = 36;
+
+const std::array<double, kCovSize> IDENTITY_COVARIANCE = [] {
+    std::array<double, kCovSize> cov{};
+    for (int i = 0; i < 36; i += 7)
+        cov[i] = 1.0;
+    return cov;
+}();
+}  // namespace
+
 ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions& options)
     : Node("aruco_detector_node", options) {
     detect_board_ = this->declare_parameter<bool>("detect_board");
@@ -218,14 +229,7 @@ void ArucoDetectorNode::imageCallback(
 
             geometry_msgs::msg::PoseWithCovariance board_pose_cov;
             board_pose_cov.pose = pose_msg.pose;
-            std::fill(board_pose_cov.covariance.begin(),
-                      board_pose_cov.covariance.end(), 0.0);
-
-            // Set covariance to identity
-            for (int i = 0; i < 6; ++i) {
-                board_pose_cov.covariance[i * 6 + i] = 1.0;
-            }
-
+            board_pose_cov.covariance = IDENTITY_COVARIANCE;
             board_landmark.pose = board_pose_cov;
 
             landmark_array.landmarks.push_back(board_landmark);
@@ -274,11 +278,7 @@ void ArucoDetectorNode::imageCallback(
         landmark.subtype = static_cast<uint16_t>(id);
         geometry_msgs::msg::PoseWithCovariance pose_cov;
         pose_cov.pose = pose_msg.pose;
-        std::fill(pose_cov.covariance.begin(), pose_cov.covariance.end(), 0.0);
-        // Set covariance to identity
-        for (int i = 0; i < 36; i += 7) {
-            pose_cov.covariance[i] = 1.0;
-        }
+        pose_cov.covariance = IDENTITY_COVARIANCE;
         landmark.pose = pose_cov;
         landmark_array.landmarks.push_back(landmark);
     }
