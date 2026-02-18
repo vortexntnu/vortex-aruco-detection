@@ -2,7 +2,6 @@
 #include <aruco_detector/aruco_file_logger.hpp>
 #include <filesystem>
 #include <rclcpp_components/register_node_macro.hpp>
-#include <sstream>
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -223,10 +222,10 @@ void ArucoDetectorNode::imageCallback(
 
             vortex_msgs::msg::Landmark board_landmark;
             board_landmark.header = msg->header;
-            board_landmark.type_class.type =
-                vortex_msgs::msg::LandmarkTypeClass::ARUCO_BOARD;
-            board_landmark.type_class.subtype =
-                vortex_msgs::msg::LandmarkTypeClass::ARUCO_BOARD_CAMERA;
+            board_landmark.type.value =
+                vortex_msgs::msg::LandmarkType::ARUCO_BOARD;
+            board_landmark.subtype.value =
+                vortex_msgs::msg::LandmarkSubtype::ARUCO_BOARD_CAMERA;
 
             geometry_msgs::msg::PoseWithCovariance board_pose_cov;
             board_pose_cov.pose = pose_msg.pose;
@@ -275,9 +274,8 @@ void ArucoDetectorNode::imageCallback(
 
         vortex_msgs::msg::Landmark landmark;
         landmark.header = msg->header;
-        landmark.type_class.type =
-            vortex_msgs::msg::LandmarkTypeClass::ARUCO_MARKER;
-        landmark.type_class.subtype = static_cast<uint16_t>(id);
+        landmark.type.value = vortex_msgs::msg::LandmarkType::ARUCO_MARKER;
+        landmark.subtype.value = static_cast<uint16_t>(id);
         geometry_msgs::msg::PoseWithCovariance pose_cov;
         pose_cov.pose = pose_msg.pose;
         pose_cov.covariance = IDENTITY_COVARIANCE;
