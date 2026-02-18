@@ -223,9 +223,10 @@ void ArucoDetectorNode::imageCallback(
 
             vortex_msgs::msg::Landmark board_landmark;
             board_landmark.header = msg->header;
-            board_landmark.type = vortex_msgs::msg::Landmark::ARUCO_BOARD;
-            board_landmark.subtype =
-                vortex_msgs::msg::Landmark::ARUCO_BOARD_CAMERA;
+            board_landmark.type_class.type =
+                vortex_msgs::msg::LandmarkTypeClass::ARUCO_BOARD;
+            board_landmark.type_class.subtype =
+                vortex_msgs::msg::LandmarkTypeClass::ARUCO_BOARD_CAMERA;
 
             geometry_msgs::msg::PoseWithCovariance board_pose_cov;
             board_pose_cov.pose = pose_msg.pose;
@@ -274,8 +275,9 @@ void ArucoDetectorNode::imageCallback(
 
         vortex_msgs::msg::Landmark landmark;
         landmark.header = msg->header;
-        landmark.type = vortex_msgs::msg::Landmark::ARUCO_MARKER;
-        landmark.subtype = static_cast<uint16_t>(id);
+        landmark.type_class.type =
+            vortex_msgs::msg::LandmarkTypeClass::ARUCO_MARKER;
+        landmark.type_class.subtype = static_cast<uint16_t>(id);
         geometry_msgs::msg::PoseWithCovariance pose_cov;
         pose_cov.pose = pose_msg.pose;
         pose_cov.covariance = IDENTITY_COVARIANCE;
