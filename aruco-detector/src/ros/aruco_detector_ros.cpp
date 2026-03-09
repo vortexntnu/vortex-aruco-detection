@@ -1,5 +1,5 @@
-#include <aruco_detector/aruco_detector_ros.hpp>
-#include <aruco_detector/aruco_file_logger.hpp>
+#include <aruco_detector/ros/aruco_detector_ros.hpp>
+#include <aruco_detector/ros/aruco_file_logger.hpp>
 #include <filesystem>
 #include <rclcpp_components/register_node_macro.hpp>
 

@@ -1,4 +1,4 @@
-#include <aruco_detector/aruco_detector.hpp>
+#include <aruco_detector/lib/aruco_detector.hpp>
 
 ArucoDetector::ArucoDetector(
     cv::Ptr<cv::aruco::Dictionary> dict,
