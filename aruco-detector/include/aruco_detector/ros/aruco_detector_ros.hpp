@@ -22,7 +22,7 @@
 
 #include <cv_bridge/cv_bridge.h>
 
-#include "aruco_detector.hpp"
+#include "aruco_detector/lib/aruco_detector.hpp"
 
 using Vector6d = Eigen::Vector<double, 6>;
 

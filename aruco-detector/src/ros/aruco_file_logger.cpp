@@ -1,4 +1,4 @@
-#include <aruco_detector/aruco_file_logger.hpp>
+#include <aruco_detector/ros/aruco_file_logger.hpp>
 
 void writeIntsToFile(std::string filename, std::vector<int> ids) {
     std::ofstream outputFile(filename);
