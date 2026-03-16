@@ -162,7 +162,9 @@ class ArucoDetectorNode : public rclcpp::Node {
 
     float marker_size_;
     float xDist_, yDist_;
+    int id_detection_secure_write_interval_;
     std::vector<int64_t> ids_;
+    std::vector<int64_t> blacklisted_ids_;
     std::vector<int> ids_detected_once_;
     std::vector<int> ids_detected_secure_;
     std::unordered_map<int, int> id_detection_counter_;

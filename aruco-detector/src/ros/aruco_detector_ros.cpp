@@ -24,6 +24,9 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions& options)
     log_markers_ = this->declare_parameter<bool>("log_markers");
     publish_detections_ = this->declare_parameter<bool>("publish_detections");
     publish_landmarks_ = this->declare_parameter<bool>("publish_landmarks");
+    id_detection_secure_write_interval_ = this->declare_parameter<int>("id_detection_secure_write_interval");
+    blacklisted_ids_ = this->declare_parameter<std::vector<int64_t>>("blacklisted_ids");
+
 
     this->declare_parameter<float>("aruco.marker_size");
     this->declare_parameter<std::string>("aruco.dictionary");
@@ -256,10 +259,15 @@ void ArucoDetectorNode::imageCallback(
     for (size_t i = 0; i < marker_ids.size(); i++) {
         int id = marker_ids[i];
         if (log_markers_) {
-            // id 0 is blacklisted, too many false positives
-            if (id == 0) {
-                continue;
+            for (size_t element = 0; element < blacklisted_ids_.size(); element++){
+                if (id == blacklisted_ids_[element]){
+                    continue;
+                }
             }
+            // id 0 is blacklisted, too many false positives
+            /* if (id == 0) {
+                continue;
+            } */
             static std::string time = ros2TimeToString(msg->header.stamp);
 
             log_marker_ids(id, time);
@@ -366,7 +374,7 @@ void ArucoDetectorNode::log_marker_ids(int id, std::string time) {
         }
     }
 
-    if (id_detection_counter_[id] == 5) {
+    if (id_detection_counter_[id] == id_detection_secure_write_interval_) {
         ids_detected_secure_.push_back(id);
 
         std::string directory_secure = "detected-aruco-markers-unique/";

@@ -3,8 +3,8 @@
   ros__parameters:
 
     subs:
-      image_topic: "/cam/image_color"
-      camera_info_topic: "/cam/camera_info"
+      image_topic: "/cam_down/image_color"
+      camera_info_topic: "/cam_down/camera_info"
 
     pubs:
       aruco_image: "/aruco_detector/image"
@@ -16,9 +16,11 @@
 
     detect_board: true  # Set to true to detect aruco boards
     visualize: true  # Set to true to draw the detected markers and board on the image
-    log_markers: false  # Set to true to log the detected markers
+    log_markers: true  # Set to true to log the detected markers
     publish_detections: true
     publish_landmarks: true
+    id_detection_secure_write_interval: 5
+    blacklisted_ids: [0]
 
       # TAC ARUCO PARAMETERS
     aruco:
