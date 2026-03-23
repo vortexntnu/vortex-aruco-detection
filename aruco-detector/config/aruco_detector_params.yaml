@@ -3,7 +3,7 @@
   ros__parameters:
 
     subs:
-      image_topic: "/cam_down/image_color"
+      image_topic: "/cam/image_color"
       camera_info_topic: "/cam_down/camera_info"
 
     pubs:
