@@ -17,6 +17,7 @@
 #include <map>
 #include <string>
 
+#include <vortex_msgs/msg/vector3_array.hpp>
 #include <vortex_msgs/msg/landmark.hpp>
 #include <vortex_msgs/msg/landmark_array.hpp>
 
@@ -100,6 +101,11 @@ class ArucoDetectorNode : public rclcpp::Node {
      * @brief Publishes detected landmarks as a LandmarkArray
      */
     rclcpp::Publisher<vortex_msgs::msg::LandmarkArray>::SharedPtr landmark_pub_;
+
+    /**
+     * @brief Publishes detected marker directions as a Vector3Array
+     */
+    rclcpp::Publisher<vortex_msgs::msg::Vector3Array>::SharedPtr marker_directions_pub_;
 
     /**
      * @brief Initialize the detector. Sets dictionary from ros param. Also

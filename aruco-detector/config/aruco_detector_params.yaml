@@ -11,6 +11,7 @@
       aruco_poses: "/aruco_detector/markers"
       board_pose: "/aruco_detector/board"
       landmarks: "/aruco_detector/landmarks"
+      marker_directions: "/aruco_detector/marker_directions"
 
     logger_service_name: "/toggle_marker_logger"
 

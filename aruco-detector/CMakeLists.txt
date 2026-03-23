@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 project(aruco_detector)
 
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD 20)
   endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -22,6 +22,7 @@ find_package(Eigen3 REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(fmt REQUIRED)
+find_package(vortex_utils REQUIRED)
 
 set(LIB "${PROJECT_NAME}")
 
@@ -32,6 +33,7 @@ add_library(${LIB} SHARED
 target_link_libraries(${LIB} PUBLIC
   ${OpenCV_LIBS}
   Eigen3::Eigen
+  vortex_utils::vortex_utils
 )
 
 target_include_directories(${LIB} PUBLIC

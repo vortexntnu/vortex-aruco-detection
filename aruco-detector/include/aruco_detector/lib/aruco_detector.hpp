@@ -5,6 +5,7 @@
 
 #include <opencv2/aruco.hpp>
 #include <opencv2/opencv.hpp>
+#include <vortex/utils/types.hpp>
 
 /**
  * @brief Class for detecting and estimating poses of ArUco markers. Also
@@ -96,6 +97,17 @@ class ArucoDetector {
         std::vector<int>& ids,
         std::vector<std::vector<cv::Point2f>>& rejected_candidates,
         cv::Ptr<cv::aruco::Board> board);
+
+    /**
+     * @brief Computes the 3D direction vectors from the camera to the detected
+     * markers in the camera frame.
+     *
+     * @param marker_corners The corners of the detected markers.
+     * @return A vector of 3D points representing the direction vectors to each
+     * detected marker.
+     */
+    std::vector<vortex::utils::types::Point3D> computeMarkerDirections(
+        const std::vector<std::vector<cv::Point2f>>& marker_corners);
 
    private:
     cv::Ptr<cv::aruco::Dictionary>

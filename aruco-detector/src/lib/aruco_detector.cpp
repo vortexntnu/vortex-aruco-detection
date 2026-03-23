@@ -108,3 +108,36 @@ std::vector<int> ArucoDetector::refineBoardMarkers(
 
     return recoveredIds;
 }
+
+std::vector<vortex::utils::types::Point3D> ArucoDetector::computeMarkerDirections(
+    const std::vector<std::vector<cv::Point2f>>& marker_corners) {
+    std::vector<vortex::utils::types::Point3D> directions;
+    directions.reserve(marker_corners.size());
+
+    for (const auto& corners : marker_corners) {
+        cv::Point2f center(0.0f, 0.0f);
+        for (const auto& corner : corners) {
+            center += corner;
+        }
+        center *= 0.25f;
+
+        std::vector<cv::Point2f> src{center};
+        std::vector<cv::Point2f> undistorted;
+        cv::undistortPoints(src, undistorted, camera_matrix_, distortion_coeffs_);
+
+        double x = undistorted[0].x;
+        double y = undistorted[0].y;
+        double z = 1.0;
+
+        double norm = std::sqrt(x * x + y * y + z * z);
+        if (norm > 0.0) {
+            x /= norm;
+            y /= norm;
+            z /= norm;
+        }
+
+        directions.push_back({x, y, z});
+    }
+
+    return directions;
+}

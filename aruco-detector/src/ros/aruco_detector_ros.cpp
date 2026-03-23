@@ -61,6 +61,9 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions& options)
     std::string landmarks_topic =
         this->declare_parameter<std::string>("pubs.landmarks");
 
+    std::string marker_directions_topic =
+        this->declare_parameter<std::string>("pubs.marker_directions");
+
     marker_image_pub_ = this->create_publisher<sensor_msgs::msg::Image>(
         aruco_image_topic, qos_sensor_data);
 
@@ -72,6 +75,9 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions& options)
 
     landmark_pub_ = this->create_publisher<vortex_msgs::msg::LandmarkArray>(
         landmarks_topic, qos_sensor_data);
+
+    marker_directions_pub_ = this->create_publisher<vortex_msgs::msg::Vector3Array>(
+        marker_directions_topic, qos_sensor_data);
 
     std::string logger_service_name =
         this->declare_parameter<std::string>("logger_service_name");
@@ -202,6 +208,21 @@ void ArucoDetectorNode::imageCallback(
         }
         return;
     }
+
+    std::vector<vortex::utils::types::Point3D> marker_directions =
+        aruco_detector_->computeMarkerDirections(marker_corners);
+
+    // TODO make this a util function maybe?
+    vortex_msgs::msg::Vector3Array marker_directions_msg;
+    marker_directions_msg.header = msg->header;
+    for (const auto& dir : marker_directions) {
+        geometry_msgs::msg::Vector3 vector_msg;
+        vector_msg.x = dir.x;
+        vector_msg.y = dir.y;
+        vector_msg.z = dir.z;
+        marker_directions_msg.vectors.push_back(vector_msg);
+    }
+    marker_directions_pub_->publish(marker_directions_msg);
 
     if (detect_board_) {
         std::vector<int> recovered_candidates =
