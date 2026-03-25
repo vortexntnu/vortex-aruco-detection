@@ -24,7 +24,7 @@
 
       # TAC ARUCO PARAMETERS
     aruco:
-      marker_size: 0.150
+      marker_size: 0.150 # 0.140 for vortex docking plate, 0.150 for TAC board
       dictionary: "DICT_ARUCO_ORIGINAL"
 
 
@@ -36,6 +36,6 @@
 
     # Vortex docking plate
     # board:
-    #   xDist: 0.462
-    #   yDist: 0.862
+    #   xDist: 0.448
+    #   yDist: 0.853
     #   ids: [28, 7, 96, 19]
