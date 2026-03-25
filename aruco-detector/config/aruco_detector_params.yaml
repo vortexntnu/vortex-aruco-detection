@@ -3,8 +3,8 @@
   ros__parameters:
 
     subs:
-      image_topic: "/cam/image_color"
-      camera_info_topic: "/cam_down/camera_info"
+      image_topic: "/orca/front_camera/image_color"
+      camera_info_topic: "/orca/front_camera/camera_info"
 
     pubs:
       aruco_image: "/aruco_detector/image"

@@ -93,6 +93,17 @@ std::tuple<int, cv::Vec3d, cv::Vec3d> ArucoDetector::estimateBoardPose(
     return {numUsedMarkers, rvec, tvec};
 }
 
+std::tuple<int, cv::Vec3d, cv::Vec3d> ArucoDetector::refineAndEstimateBoardPose(
+    const cv::Mat& input_image,
+    std::vector<std::vector<cv::Point2f>>& marker_corners,
+    std::vector<int>& marker_ids,
+    std::vector<std::vector<cv::Point2f>>& rejected_candidates,
+    cv::Ptr<cv::aruco::Board> board) {
+    refineBoardMarkers(input_image, marker_corners, marker_ids,
+                       rejected_candidates, board);
+    return estimateBoardPose(marker_corners, marker_ids, board);
+}
+
 std::vector<int> ArucoDetector::refineBoardMarkers(
     const cv::Mat& input_image,
     std::vector<std::vector<cv::Point2f>>& corners,

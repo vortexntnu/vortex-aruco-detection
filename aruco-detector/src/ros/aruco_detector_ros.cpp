@@ -1,7 +1,8 @@
 #include <aruco_detector/ros/aruco_detector_ros.hpp>
-#include <aruco_detector/ros/aruco_file_logger.hpp>
 #include <filesystem>
 #include <rclcpp_components/register_node_macro.hpp>
+
+#include <vortex/cv_utils/pose_conversions.hpp>
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -24,9 +25,13 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions& options)
     log_markers_ = this->declare_parameter<bool>("log_markers");
     publish_detections_ = this->declare_parameter<bool>("publish_detections");
     publish_landmarks_ = this->declare_parameter<bool>("publish_landmarks");
-    id_detection_secure_write_interval_ = this->declare_parameter<int>("id_detection_secure_write_interval");
-    blacklisted_ids_ = this->declare_parameter<std::vector<int64_t>>("blacklisted_ids");
+    int id_detection_secure_write_interval =
+        this->declare_parameter<int>("id_detection_secure_write_interval");
+    blacklisted_ids_ =
+        this->declare_parameter<std::vector<int64_t>>("blacklisted_ids");
 
+    file_logger_ =
+        std::make_unique<ArucoFileLogger>(id_detection_secure_write_interval);
 
     this->declare_parameter<float>("aruco.marker_size");
     this->declare_parameter<std::string>("aruco.dictionary");
@@ -125,8 +130,8 @@ void ArucoDetectorNode::initializeDetector() {
         this->get_parameter("aruco.dictionary").as_string();
 
     if (dictionary_map.count(dictionary_type)) {
-        dictionary_ =
-            cv::aruco::getPredefinedDictionary(dictionary_map[dictionary_type]);
+        dictionary_ = cv::aruco::getPredefinedDictionary(
+            dictionary_map.at(dictionary_type));
     } else {
         spdlog::warn("Invalid dictionary type received: {}. Using default.",
                      dictionary_type);
@@ -207,19 +212,14 @@ void ArucoDetectorNode::imageCallback(
     }
 
     if (detect_board_) {
-        std::vector<int> recovered_candidates =
-            aruco_detector_->refineBoardMarkers(input_image_gray,
-                                                marker_corners, marker_ids,
-                                                rejected_candidates, board_);
-
         auto [valid, board_rvec, board_tvec] =
-            aruco_detector_->estimateBoardPose(marker_corners, marker_ids,
-                                               board_);
+            aruco_detector_->refineAndEstimateBoardPose(
+                input_image_gray, marker_corners, marker_ids,
+                rejected_candidates, board_);
 
         if (valid > 0) {
-            auto board_quat = rvec_to_quat(board_rvec);
             geometry_msgs::msg::PoseStamped pose_msg =
-                cv_pose_to_ros_pose_stamped(board_tvec, board_quat,
+                cv_pose_to_ros_pose_stamped(board_rvec, board_tvec,
                                             msg->header);
             board_pose_pub_->publish(pose_msg);
 
@@ -259,25 +259,22 @@ void ArucoDetectorNode::imageCallback(
     for (size_t i = 0; i < marker_ids.size(); i++) {
         int id = marker_ids[i];
         if (log_markers_) {
-            for (size_t element = 0; element < blacklisted_ids_.size(); element++){
-                if (id == blacklisted_ids_[element]){
+            for (size_t element = 0; element < blacklisted_ids_.size();
+                 element++) {
+                if (id == blacklisted_ids_[element]) {
                     continue;
                 }
             }
-            // id 0 is blacklisted, too many false positives
-            /* if (id == 0) {
-                continue;
-            } */
-            static std::string time = ros2TimeToString(msg->header.stamp);
+            static std::string time = nanosecTimeToString(
+                rclcpp::Time(msg->header.stamp).nanoseconds());
 
-            log_marker_ids(id, time);
+            file_logger_->logMarkerId(id, time);
         }
 
         const cv::Vec3d& rvec = rvecs[i];
         const cv::Vec3d& tvec = tvecs[i];
-        const tf2::Quaternion quat = rvec_to_quat(rvec);
 
-        auto pose_msg = cv_pose_to_ros_pose_stamped(tvec, quat, msg->header);
+        auto pose_msg = cv_pose_to_ros_pose_stamped(rvec, tvec, msg->header);
         pose_array.poses.push_back(pose_msg.pose);
 
         vortex_msgs::msg::Landmark landmark;
@@ -317,75 +314,23 @@ void ArucoDetectorNode::imageCallback(
     }
 }
 
-tf2::Quaternion ArucoDetectorNode::rvec_to_quat(const cv::Vec3d& rvec) {
-    cv::Mat rmat;
-    cv::Rodrigues(rvec, rmat);
-
-    tf2::Matrix3x3 rotation_matrix(
-        rmat.at<double>(0, 0), rmat.at<double>(0, 1), rmat.at<double>(0, 2),
-        rmat.at<double>(1, 0), rmat.at<double>(1, 1), rmat.at<double>(1, 2),
-        rmat.at<double>(2, 0), rmat.at<double>(2, 1), rmat.at<double>(2, 2));
-
-    tf2::Quaternion quaternion;
-    rotation_matrix.getRotation(quaternion);
-
-    return quaternion;
-}
-
 geometry_msgs::msg::PoseStamped ArucoDetectorNode::cv_pose_to_ros_pose_stamped(
+    const cv::Vec3d& rvec,
     const cv::Vec3d& tvec,
-    const tf2::Quaternion& quat,
     const std_msgs::msg::Header& header) {
+    const auto pose = vortex::cv_utils::pose_from_rvec_tvec(rvec, tvec);
+
     geometry_msgs::msg::PoseStamped pose_msg;
-
     pose_msg.header = header;
-
-    pose_msg.pose.position.x = tvec[0];
-    pose_msg.pose.position.y = tvec[1];
-    pose_msg.pose.position.z = tvec[2];
-
-    pose_msg.pose.orientation.x = quat.x();
-    pose_msg.pose.orientation.y = quat.y();
-    pose_msg.pose.orientation.z = quat.z();
-    pose_msg.pose.orientation.w = quat.w();
+    pose_msg.pose.position.x = pose.x;
+    pose_msg.pose.position.y = pose.y;
+    pose_msg.pose.position.z = pose.z;
+    pose_msg.pose.orientation.w = pose.qw;
+    pose_msg.pose.orientation.x = pose.qx;
+    pose_msg.pose.orientation.y = pose.qy;
+    pose_msg.pose.orientation.z = pose.qz;
 
     return pose_msg;
-}
-
-void ArucoDetectorNode::log_marker_ids(int id, std::string time) {
-    id_detection_counter_[id] += 1;
-
-    bool new_id = false;
-
-    if (std::find(ids_detected_once_.begin(), ids_detected_once_.end(), id) ==
-        ids_detected_once_.end()) {
-        ids_detected_once_.push_back(id);
-        new_id = true;
-
-        if (new_id) {
-            std::string directory = "detected-aruco-markers-stream/";
-
-            if (!std::filesystem::exists(directory)) {
-                std::filesystem::create_directory(directory);
-            }
-
-            writeIntsToFile(directory + "detected_markers" + time + ".csv",
-                            ids_detected_once_);
-        }
-    }
-
-    if (id_detection_counter_[id] == id_detection_secure_write_interval_) {
-        ids_detected_secure_.push_back(id);
-
-        std::string directory_secure = "detected-aruco-markers-unique/";
-
-        if (!std::filesystem::exists(directory_secure)) {
-            std::filesystem::create_directory(directory_secure);
-        }
-
-        writeIntsToFile(directory_secure + "detected_markers" + time + ".csv",
-                        ids_detected_secure_);
-    }
 }
 
 RCLCPP_COMPONENTS_REGISTER_NODE(ArucoDetectorNode)

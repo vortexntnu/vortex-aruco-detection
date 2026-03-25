@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.8)
 project(aruco_detector)
 
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
-  endif()
+  set(CMAKE_CXX_STANDARD 20)
+endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -17,9 +17,10 @@ find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(vortex_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
-find_package(tf2 REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(vortex_utils REQUIRED)
+find_package(vortex_cv_utils REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(fmt REQUIRED)
 
@@ -27,6 +28,7 @@ set(LIB "${PROJECT_NAME}")
 
 add_library(${LIB} SHARED
   src/lib/aruco_detector.cpp
+  src/lib/aruco_file_logger.cpp
 )
 
 target_link_libraries(${LIB} PUBLIC
@@ -49,7 +51,6 @@ set(ROS_LIB "${PROJECT_NAME}_component")
 
 add_library(${ROS_LIB} SHARED
   src/ros/aruco_detector_ros.cpp
-  src/ros/aruco_file_logger.cpp
 )
 
 target_link_libraries(${ROS_LIB} PUBLIC
@@ -67,11 +68,11 @@ ament_target_dependencies(${ROS_LIB} PUBLIC
   sensor_msgs
   geometry_msgs
   vortex_msgs
-  tf2
   cv_bridge
   std_srvs
   spdlog
   fmt
+  vortex_cv_utils
 )
 
 rclcpp_components_register_node(
