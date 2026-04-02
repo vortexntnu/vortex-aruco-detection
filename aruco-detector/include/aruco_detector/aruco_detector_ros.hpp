@@ -14,9 +14,9 @@
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <Eigen/Dense>
-#include <vortex/utils/math.hpp>
 #include <map>
 #include <string>
+#include <vortex/utils/math.hpp>
 
 #include <vortex_msgs/msg/landmark.hpp>
 #include <vortex_msgs/msg/landmark_array.hpp>
