@@ -22,6 +22,7 @@ find_package(Eigen3 REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(fmt REQUIRED)
+find_package(vortex_utils REQUIRED)
 
 include_directories(include)
 include_directories(${EIGEN3_INCLUDE_DIR})
@@ -52,6 +53,7 @@ ament_target_dependencies(${LIB_NAME} PUBLIC
   sensor_msgs
   geometry_msgs
   vortex_msgs
+  vortex_utils
   tf2
   cv_bridge
   std_srvs

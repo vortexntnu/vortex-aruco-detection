@@ -14,6 +14,7 @@
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <Eigen/Dense>
+#include <vortex/utils/math.hpp>
 #include <map>
 #include <string>
 
@@ -159,6 +160,7 @@ class ArucoDetectorNode : public rclcpp::Node {
     bool log_markers_;
     bool publish_detections_;
     bool publish_landmarks_;
+    bool enu_ned_rotation_;
 
     float marker_size_;
     float xDist_, yDist_;
