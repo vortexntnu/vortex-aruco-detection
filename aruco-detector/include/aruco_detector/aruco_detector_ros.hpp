@@ -16,6 +16,7 @@
 #include <Eigen/Dense>
 #include <map>
 #include <string>
+#include <vortex/utils/math.hpp>
 
 #include <vortex_msgs/msg/landmark.hpp>
 #include <vortex_msgs/msg/landmark_array.hpp>
@@ -159,6 +160,7 @@ class ArucoDetectorNode : public rclcpp::Node {
     bool log_markers_;
     bool publish_detections_;
     bool publish_landmarks_;
+    bool enu_ned_rotation_;
 
     float marker_size_;
     float xDist_, yDist_;

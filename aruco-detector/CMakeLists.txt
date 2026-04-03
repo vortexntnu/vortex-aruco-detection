@@ -2,8 +2,10 @@ cmake_minimum_required(VERSION 3.8)
 project(aruco_detector)
 
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
-  endif()
+  set(CMAKE_CXX_STANDARD 20)
+endif()
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -22,6 +24,7 @@ find_package(Eigen3 REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(fmt REQUIRED)
+find_package(vortex_utils REQUIRED)
 
 include_directories(include)
 include_directories(${EIGEN3_INCLUDE_DIR})
@@ -52,6 +55,7 @@ ament_target_dependencies(${LIB_NAME} PUBLIC
   sensor_msgs
   geometry_msgs
   vortex_msgs
+  vortex_utils
   tf2
   cv_bridge
   std_srvs
