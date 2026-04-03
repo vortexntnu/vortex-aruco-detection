@@ -19,7 +19,7 @@
     log_markers: false  # Set to true to log the detected markers
     publish_detections: true
     publish_landmarks: true
-    enu_ned_rotation: true  # Apply ENU to NED rotation to detected poses  # codespell:ignore ned
+    enu_ned_rotation: true  # Apply ENU to NED rotation to detected poses
 
       # TAC ARUCO PARAMETERS
     aruco:
