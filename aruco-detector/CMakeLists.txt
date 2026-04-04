@@ -4,6 +4,8 @@ project(aruco_detector)
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 20)
 endif()
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -23,6 +25,7 @@ find_package(vortex_utils REQUIRED)
 find_package(vortex_cv_utils REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(fmt REQUIRED)
+find_package(vortex_utils REQUIRED)
 
 set(LIB "${PROJECT_NAME}")
 
@@ -68,6 +71,8 @@ ament_target_dependencies(${ROS_LIB} PUBLIC
   sensor_msgs
   geometry_msgs
   vortex_msgs
+  vortex_utils
+  tf2
   cv_bridge
   std_srvs
   spdlog

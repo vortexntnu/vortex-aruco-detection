@@ -25,6 +25,7 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions& options)
     log_markers_ = this->declare_parameter<bool>("log_markers");
     publish_detections_ = this->declare_parameter<bool>("publish_detections");
     publish_landmarks_ = this->declare_parameter<bool>("publish_landmarks");
+<<<<<<< HEAD:aruco-detector/src/ros/aruco_detector_ros.cpp
     int id_detection_secure_write_interval =
         this->declare_parameter<int>("id_detection_secure_write_interval");
     blacklisted_ids_ =
@@ -32,6 +33,9 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions& options)
 
     file_logger_ =
         std::make_unique<ArucoFileLogger>(id_detection_secure_write_interval);
+=======
+    enu_ned_rotation_ = this->declare_parameter<bool>("enu_ned_rotation");
+>>>>>>> main:aruco-detector/src/aruco_detector_ros.cpp
 
     this->declare_parameter<float>("aruco.marker_size");
     this->declare_parameter<std::string>("aruco.dictionary");
@@ -218,6 +222,16 @@ void ArucoDetectorNode::imageCallback(
                 rejected_candidates, board_);
 
         if (valid > 0) {
+<<<<<<< HEAD:aruco-detector/src/ros/aruco_detector_ros.cpp
+=======
+            auto board_quat = rvec_to_quat(board_rvec);
+            if (enu_ned_rotation_) {
+                Eigen::Quaterniond eq(board_quat.w(), board_quat.x(),
+                                      board_quat.y(), board_quat.z());
+                eq = vortex::utils::math::enu_ned_rotation(eq);
+                board_quat = tf2::Quaternion(eq.x(), eq.y(), eq.z(), eq.w());
+            }
+>>>>>>> main:aruco-detector/src/aruco_detector_ros.cpp
             geometry_msgs::msg::PoseStamped pose_msg =
                 cv_pose_to_ros_pose_stamped(board_rvec, board_tvec,
                                             msg->header);
@@ -273,6 +287,15 @@ void ArucoDetectorNode::imageCallback(
 
         const cv::Vec3d& rvec = rvecs[i];
         const cv::Vec3d& tvec = tvecs[i];
+<<<<<<< HEAD:aruco-detector/src/ros/aruco_detector_ros.cpp
+=======
+        tf2::Quaternion quat = rvec_to_quat(rvec);
+        if (enu_ned_rotation_) {
+            Eigen::Quaterniond eq(quat.w(), quat.x(), quat.y(), quat.z());
+            eq = vortex::utils::math::enu_ned_rotation(eq);
+            quat = tf2::Quaternion(eq.x(), eq.y(), eq.z(), eq.w());
+        }
+>>>>>>> main:aruco-detector/src/aruco_detector_ros.cpp
 
         auto pose_msg = cv_pose_to_ros_pose_stamped(rvec, tvec, msg->header);
         pose_array.poses.push_back(pose_msg.pose);

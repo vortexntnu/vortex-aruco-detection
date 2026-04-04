@@ -19,8 +19,7 @@
     log_markers: true  # Set to true to log the detected markers
     publish_detections: true
     publish_landmarks: true
-    id_detection_secure_write_interval: 5
-    blacklisted_ids: [0]
+    enu_ned_rotation: true  # Apply ENU to NED rotation to detected poses
 
       # TAC ARUCO PARAMETERS
     aruco:
