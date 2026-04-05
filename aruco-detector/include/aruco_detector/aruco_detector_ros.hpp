@@ -177,6 +177,7 @@ class ArucoDetectorNode : public rclcpp::Node {
     std::string image_topic_;
     std::string camera_info_topic_;
     bool camera_info_received_ = false;
+    std::string out_tf_frame_;
 };
 
 #endif  // ARUCO_DETECTOR_ROS_HPP
