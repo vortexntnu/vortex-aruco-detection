@@ -35,7 +35,7 @@ ArucoDetectorNode::ArucoDetectorNode(const rclcpp::NodeOptions& options)
         std::make_unique<ArucoFileLogger>(id_detection_secure_write_interval);
 =======
     enu_ned_rotation_ = this->declare_parameter<bool>("enu_ned_rotation");
->>>>>>> main:aruco-detector/src/aruco_detector_ros.cpp
+    out_tf_frame_ = this->declare_parameter<std::string>("out_tf_frame");
 
     this->declare_parameter<float>("aruco.marker_size");
     this->declare_parameter<std::string>("aruco.dictionary");
@@ -210,6 +210,8 @@ void ArucoDetectorNode::imageCallback(
         if (visualize_) {
             auto message = cv_bridge::CvImage(msg->header, "bgr8", input_image)
                                .toImageMsg();
+            message->header.frame_id =
+                out_tf_frame_.empty() ? msg->header.frame_id : out_tf_frame_;
             marker_image_pub_->publish(*message);
         }
         return;
@@ -235,6 +237,8 @@ void ArucoDetectorNode::imageCallback(
             geometry_msgs::msg::PoseStamped pose_msg =
                 cv_pose_to_ros_pose_stamped(board_rvec, board_tvec,
                                             msg->header);
+            pose_msg.header.frame_id =
+                out_tf_frame_.empty() ? msg->header.frame_id : out_tf_frame_;
             board_pose_pub_->publish(pose_msg);
 
             vortex_msgs::msg::Landmark board_landmark;
@@ -313,6 +317,10 @@ void ArucoDetectorNode::imageCallback(
 
     pose_array.header = msg->header;
     landmark_array.header = msg->header;
+    pose_array.header.frame_id =
+        out_tf_frame_.empty() ? msg->header.frame_id : out_tf_frame_;
+    landmark_array.header.frame_id =
+        out_tf_frame_.empty() ? msg->header.frame_id : out_tf_frame_;
     if (publish_detections_) {
         marker_pose_pub_->publish(pose_array);
     }
@@ -332,6 +340,8 @@ void ArucoDetectorNode::imageCallback(
 
         auto message =
             cv_bridge::CvImage(msg->header, "bgr8", input_image).toImageMsg();
+        message->header.frame_id =
+            out_tf_frame_.empty() ? msg->header.frame_id : out_tf_frame_;
 
         marker_image_pub_->publish(*message);
     }
