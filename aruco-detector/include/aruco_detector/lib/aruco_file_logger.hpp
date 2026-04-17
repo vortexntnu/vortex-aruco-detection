@@ -24,6 +24,11 @@ void writeIntsToFile(std::string filename, std::vector<int> ids);
  */
 std::string nanosecTimeToString(int64_t nanoseconds);
 
+enum class logMode {
+    STREAM,  // Write to file without checks
+    SECURE,  // Write to file after detection_threshold confirmations
+};
+
 /**
  * @brief Stateful logger that records detected ArUco marker IDs to CSV files.
  *
@@ -33,7 +38,7 @@ std::string nanosecTimeToString(int64_t nanoseconds);
  */
 class ArucoFileLogger {
    public:
-    explicit ArucoFileLogger(int secure_write_interval);
+    explicit ArucoFileLogger(int secure_write_interval, logMode mode);
 
     /**
      * @brief Log a detected marker ID.
@@ -45,6 +50,7 @@ class ArucoFileLogger {
 
    private:
     int secure_write_interval_;
+    logMode mode_;
     std::unordered_map<int, int> id_detection_counter_;
     std::vector<int> ids_detected_once_;
     std::vector<int> ids_detected_secure_;

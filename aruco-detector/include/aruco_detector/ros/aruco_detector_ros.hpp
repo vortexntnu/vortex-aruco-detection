@@ -11,7 +11,10 @@
 #include <sensor_msgs/msg/image.hpp>
 #include <std_srvs/srv/set_bool.hpp>
 
-#include <memory>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <Eigen/Dense>
+#include <map>
 #include <string>
 #include <vortex/utils/math.hpp>
 
@@ -105,6 +108,11 @@ class ArucoDetectorNode : public rclcpp::Node {
      * @param msg The camera info message
      */
     void cameraInfoCallback(const sensor_msgs::msg::CameraInfo::SharedPtr msg);
+
+    /**
+     * @brief Function to convert a rotation vector to a quaternion
+     */
+    tf2::Quaternion rvec_to_quat(const cv::Vec3d& rvec);
 
     /**
      * @brief Convert rvec + tvec to a stamped ROS pose using

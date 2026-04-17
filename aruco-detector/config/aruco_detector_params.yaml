@@ -20,6 +20,9 @@
     detect_board: true  # Set to true to detect aruco boards
     visualize: true  # Set to true to draw the detected markers and board on the image
     log_markers: true  # Set to true to log the detected markers
+    log_mode: "stream"  # 'stream' or 'secure'
+    detection_threshold: 5
+    blacklisted_ids: []
     publish_detections: true
     publish_landmarks: true
     enu_ned_rotation: true  # Apply ENU to NED rotation to detected poses
