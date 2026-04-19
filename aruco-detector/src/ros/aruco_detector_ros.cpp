@@ -2,8 +2,6 @@
 #include <filesystem>
 #include <rclcpp_components/register_node_macro.hpp>
 
-#include <vortex/cv_utils/pose_conversions.hpp>
-
 using std::placeholders::_1;
 using std::placeholders::_2;
 
@@ -234,7 +232,7 @@ void ArucoDetectorNode::imageCallback(
                 board_quat = tf2::Quaternion(eq.x(), eq.y(), eq.z(), eq.w());
             }
             geometry_msgs::msg::PoseStamped pose_msg =
-                cv_pose_to_ros_pose_stamped(board_rvec, board_tvec,
+                cv_pose_to_ros_pose_stamped(board_tvec, board_quat,
                                             msg->header);
             pose_msg.header.frame_id =
                 out_tf_frame_.empty() ? msg->header.frame_id : out_tf_frame_;
@@ -297,7 +295,7 @@ void ArucoDetectorNode::imageCallback(
             quat = tf2::Quaternion(eq.x(), eq.y(), eq.z(), eq.w());
         }
 
-        auto pose_msg = cv_pose_to_ros_pose_stamped(rvec, tvec, msg->header);
+        auto pose_msg = cv_pose_to_ros_pose_stamped(tvec, quat, msg->header);
         pose_array.poses.push_back(pose_msg.pose);
 
         vortex_msgs::msg::Landmark landmark;
@@ -344,25 +342,36 @@ void ArucoDetectorNode::imageCallback(
 }
 
 tf2::Quaternion ArucoDetectorNode::rvec_to_quat(const cv::Vec3d& rvec) {
-    const auto q = vortex::cv_utils::quaternion_from_rvec(rvec);
-    return tf2::Quaternion(q.x(), q.y(), q.z(), q.w());
+    cv::Mat rmat;
+    cv::Rodrigues(rvec, rmat);
+
+    tf2::Matrix3x3 rotation_matrix(
+        rmat.at<double>(0, 0), rmat.at<double>(0, 1), rmat.at<double>(0, 2),
+        rmat.at<double>(1, 0), rmat.at<double>(1, 1), rmat.at<double>(1, 2),
+        rmat.at<double>(2, 0), rmat.at<double>(2, 1), rmat.at<double>(2, 2));
+
+    tf2::Quaternion quaternion;
+    rotation_matrix.getRotation(quaternion);
+
+    return quaternion;
 }
 
 geometry_msgs::msg::PoseStamped ArucoDetectorNode::cv_pose_to_ros_pose_stamped(
-    const cv::Vec3d& rvec,
     const cv::Vec3d& tvec,
+    const tf2::Quaternion& quat,
     const std_msgs::msg::Header& header) {
-    const auto pose = vortex::cv_utils::pose_from_rvec_tvec(rvec, tvec);
-
     geometry_msgs::msg::PoseStamped pose_msg;
+
     pose_msg.header = header;
-    pose_msg.pose.position.x = pose.x;
-    pose_msg.pose.position.y = pose.y;
-    pose_msg.pose.position.z = pose.z;
-    pose_msg.pose.orientation.w = pose.qw;
-    pose_msg.pose.orientation.x = pose.qx;
-    pose_msg.pose.orientation.y = pose.qy;
-    pose_msg.pose.orientation.z = pose.qz;
+
+    pose_msg.pose.position.x = tvec[0];
+    pose_msg.pose.position.y = tvec[1];
+    pose_msg.pose.position.z = tvec[2];
+
+    pose_msg.pose.orientation.x = quat.x();
+    pose_msg.pose.orientation.y = quat.y();
+    pose_msg.pose.orientation.z = quat.z();
+    pose_msg.pose.orientation.w = quat.w();
 
     return pose_msg;
 }

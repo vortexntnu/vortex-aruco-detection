@@ -23,7 +23,6 @@ find_package(tf2 REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(vortex_utils REQUIRED)
-find_package(vortex_cv_utils REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(fmt REQUIRED)
 find_package(vortex_utils REQUIRED)
@@ -78,7 +77,6 @@ ament_target_dependencies(${ROS_LIB} PUBLIC
   std_srvs
   spdlog
   fmt
-  vortex_cv_utils
 )
 
 rclcpp_components_register_node(

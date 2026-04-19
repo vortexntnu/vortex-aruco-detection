@@ -18,8 +18,6 @@
   <depend>eigen</depend>
   <depend>vortex_msgs</depend>
   <depend>vortex_utils</depend>
-  <depend>vortex_cv_utils</depend>
-
 
   <export>
     <build_type>ament_cmake</build_type>

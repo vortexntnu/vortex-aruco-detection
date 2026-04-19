@@ -119,8 +119,8 @@ class ArucoDetectorNode : public rclcpp::Node {
      * vortex::cv_utils::pose_from_rvec_tvec.
      */
     geometry_msgs::msg::PoseStamped cv_pose_to_ros_pose_stamped(
-        const cv::Vec3d& rvec,
         const cv::Vec3d& tvec,
+        const tf2::Quaternion& quat,
         const std_msgs::msg::Header& header);
 
     void toggleLogging(
