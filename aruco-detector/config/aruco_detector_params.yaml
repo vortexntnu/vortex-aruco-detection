@@ -3,8 +3,8 @@
   ros__parameters:
 
     subs:
-      image_topic: "/orca/front_camera/image_color"
-      camera_info_topic: "/orca/front_camera/camera_info"
+      image_topic: "/nautilus/front_camera/image_color"
+      camera_info_topic: "/nautilus/front_camera/camera_info"
 
     pubs:
       aruco_image: "/aruco_detector/image"
@@ -20,6 +20,9 @@
     detect_board: true  # Set to true to detect aruco boards
     visualize: true  # Set to true to draw the detected markers and board on the image
     log_markers: true  # Set to true to log the detected markers
+    log_mode: "stream"  # 'stream' or 'secure'
+    detection_threshold: 5
+    blacklisted_ids: [0]
     publish_detections: true
     publish_landmarks: true
     enu_ned_rotation: true  # Apply ENU to NED rotation to detected poses

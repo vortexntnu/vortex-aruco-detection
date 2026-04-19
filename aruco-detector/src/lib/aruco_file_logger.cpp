@@ -34,41 +34,34 @@ std::string nanosecTimeToString(int64_t nanoseconds) {
     return ss.str();
 }
 
-ArucoFileLogger::ArucoFileLogger(int secure_write_interval)
-    : secure_write_interval_(secure_write_interval) {}
+ArucoFileLogger::ArucoFileLogger(int secure_write_interval, logMode mode)
+    : secure_write_interval_(secure_write_interval), mode_(mode) {}
 
 void ArucoFileLogger::logMarkerId(int id, const std::string& time) {
     id_detection_counter_[id] += 1;
 
-    bool new_id = false;
+    if (mode_ == logMode::STREAM) {
+        if (std::find(ids_detected_once_.begin(), ids_detected_once_.end(),
+                      id) == ids_detected_once_.end()) {
+            ids_detected_once_.push_back(id);
 
-    if (std::find(ids_detected_once_.begin(), ids_detected_once_.end(), id) ==
-        ids_detected_once_.end()) {
-        ids_detected_once_.push_back(id);
-        new_id = true;
-
-        if (new_id) {
             std::string directory = "detected-aruco-markers-stream/";
-
             if (!std::filesystem::exists(directory)) {
                 std::filesystem::create_directory(directory);
             }
-
             writeIntsToFile(directory + "detected_markers" + time + ".csv",
                             ids_detected_once_);
         }
-    }
+    } else {
+        if (id_detection_counter_[id] == secure_write_interval_) {
+            ids_detected_secure_.push_back(id);
 
-    if (id_detection_counter_[id] == secure_write_interval_) {
-        ids_detected_secure_.push_back(id);
-
-        std::string directory_secure = "detected-aruco-markers-unique/";
-
-        if (!std::filesystem::exists(directory_secure)) {
-            std::filesystem::create_directory(directory_secure);
+            std::string directory = "detected-aruco-markers-unique/";
+            if (!std::filesystem::exists(directory)) {
+                std::filesystem::create_directory(directory);
+            }
+            writeIntsToFile(directory + "detected_markers" + time + ".csv",
+                            ids_detected_secure_);
         }
-
-        writeIntsToFile(directory_secure + "detected_markers" + time + ".csv",
-                        ids_detected_secure_);
     }
 }
