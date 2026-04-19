@@ -343,6 +343,11 @@ void ArucoDetectorNode::imageCallback(
     }
 }
 
+tf2::Quaternion ArucoDetectorNode::rvec_to_quat(const cv::Vec3d& rvec) {
+    const auto q = vortex::cv_utils::quaternion_from_rvec(rvec);
+    return tf2::Quaternion(q.x(), q.y(), q.z(), q.w());
+}
+
 geometry_msgs::msg::PoseStamped ArucoDetectorNode::cv_pose_to_ros_pose_stamped(
     const cv::Vec3d& rvec,
     const cv::Vec3d& tvec,
