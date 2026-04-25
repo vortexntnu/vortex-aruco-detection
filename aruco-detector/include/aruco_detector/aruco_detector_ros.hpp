@@ -134,6 +134,10 @@ class ArucoDetectorNode : public rclcpp::Node {
      */
     tf2::Quaternion rvec_to_quat(const cv::Vec3d& rvec);
 
+    std::pair<cv::Vec3d, tf2::Quaternion> apply_enu_ned(
+        const cv::Vec3d& tvec,
+        const tf2::Quaternion& quat) const;
+
     /**
      * @brief Function to convert a translation vector and quaternion to a
      * PoseStamped message
