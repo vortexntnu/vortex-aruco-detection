@@ -1,10 +1,31 @@
 #ifndef ARUCO_DETECTOR_HPP
 #define ARUCO_DETECTOR_HPP
 
+#include <map>
+#include <string>
 #include <vector>
 
 #include <opencv2/aruco.hpp>
 #include <opencv2/opencv.hpp>
+
+inline const std::map<std::string, cv::aruco::PREDEFINED_DICTIONARY_NAME>
+    dictionary_map = {{"DICT_4X4_50", cv::aruco::DICT_4X4_50},
+                      {"DICT_4X4_100", cv::aruco::DICT_4X4_100},
+                      {"DICT_4X4_250", cv::aruco::DICT_4X4_250},
+                      {"DICT_4X4_1000", cv::aruco::DICT_4X4_1000},
+                      {"DICT_5X5_50", cv::aruco::DICT_5X5_50},
+                      {"DICT_5X5_100", cv::aruco::DICT_5X5_100},
+                      {"DICT_5X5_250", cv::aruco::DICT_5X5_250},
+                      {"DICT_5X5_1000", cv::aruco::DICT_5X5_1000},
+                      {"DICT_6X6_50", cv::aruco::DICT_6X6_50},
+                      {"DICT_6X6_100", cv::aruco::DICT_6X6_100},
+                      {"DICT_6X6_250", cv::aruco::DICT_6X6_250},
+                      {"DICT_6X6_1000", cv::aruco::DICT_6X6_1000},
+                      {"DICT_7X7_50", cv::aruco::DICT_7X7_50},
+                      {"DICT_7X7_100", cv::aruco::DICT_7X7_100},
+                      {"DICT_7X7_250", cv::aruco::DICT_7X7_250},
+                      {"DICT_7X7_1000", cv::aruco::DICT_7X7_1000},
+                      {"DICT_ARUCO_ORIGINAL", cv::aruco::DICT_ARUCO_ORIGINAL}};
 
 /**
  * @brief Class for detecting and estimating poses of ArUco markers. Also
@@ -94,6 +115,28 @@ class ArucoDetector {
         const cv::Mat& input_image,
         std::vector<std::vector<cv::Point2f>>& corners,
         std::vector<int>& ids,
+        std::vector<std::vector<cv::Point2f>>& rejected_candidates,
+        cv::Ptr<cv::aruco::Board> board);
+
+    /**
+     * @brief Refines detected markers against a board and estimates the board
+     * pose in a single step.
+     *
+     * Equivalent to calling refineBoardMarkers followed by estimateBoardPose.
+     *
+     * @param input_image The input image.
+     * @param marker_corners The detected marker corners (modified in-place).
+     * @param marker_ids The detected marker IDs (modified in-place).
+     * @param rejected_candidates The rejected marker candidates (modified
+     * in-place).
+     * @param board The ArUco board.
+     * @return A tuple containing the number of markers used, the rotation
+     * vector, and the translation vector.
+     */
+    std::tuple<int, cv::Vec3d, cv::Vec3d> refineAndEstimateBoardPose(
+        const cv::Mat& input_image,
+        std::vector<std::vector<cv::Point2f>>& marker_corners,
+        std::vector<int>& marker_ids,
         std::vector<std::vector<cv::Point2f>>& rejected_candidates,
         cv::Ptr<cv::aruco::Board> board);
 
