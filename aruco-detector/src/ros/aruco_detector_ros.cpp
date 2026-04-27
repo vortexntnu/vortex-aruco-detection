@@ -225,15 +225,11 @@ void ArucoDetectorNode::imageCallback(
 
         if (valid > 0) {
             auto board_quat = rvec_to_quat(board_rvec);
-            if (enu_ned_rotation_) {
-                Eigen::Quaterniond eq(board_quat.w(), board_quat.x(),
-                                      board_quat.y(), board_quat.z());
-                eq = vortex::utils::math::enu_ned_rotation(eq);
-                board_quat = tf2::Quaternion(eq.x(), eq.y(), eq.z(), eq.w());
-            }
+            auto [tvec_out, quat_out] = enu_ned_rotation_
+                ? apply_enu_ned(board_tvec, board_quat)
+                : std::make_pair(board_tvec, board_quat);
             geometry_msgs::msg::PoseStamped pose_msg =
-                cv_pose_to_ros_pose_stamped(board_tvec, board_quat,
-                                            msg->header);
+                cv_pose_to_ros_pose_stamped(tvec_out, quat_out, msg->header);
             pose_msg.header.frame_id =
                 out_tf_frame_.empty() ? msg->header.frame_id : out_tf_frame_;
             board_pose_pub_->publish(pose_msg);
@@ -289,13 +285,10 @@ void ArucoDetectorNode::imageCallback(
         const cv::Vec3d& rvec = rvecs[i];
         const cv::Vec3d& tvec = tvecs[i];
         tf2::Quaternion quat = rvec_to_quat(rvec);
-        if (enu_ned_rotation_) {
-            Eigen::Quaterniond eq(quat.w(), quat.x(), quat.y(), quat.z());
-            eq = vortex::utils::math::enu_ned_rotation(eq);
-            quat = tf2::Quaternion(eq.x(), eq.y(), eq.z(), eq.w());
-        }
-
-        auto pose_msg = cv_pose_to_ros_pose_stamped(tvec, quat, msg->header);
+        auto [tvec_out, quat_out] = enu_ned_rotation_
+            ? apply_enu_ned(tvec, quat)
+            : std::make_pair(tvec, quat);
+        auto pose_msg = cv_pose_to_ros_pose_stamped(tvec_out, quat_out, msg->header);
         pose_array.poses.push_back(pose_msg.pose);
 
         vortex_msgs::msg::Landmark landmark;
@@ -339,6 +332,19 @@ void ArucoDetectorNode::imageCallback(
 
         marker_image_pub_->publish(*message);
     }
+}
+
+std::pair<cv::Vec3d, tf2::Quaternion> ArucoDetectorNode::apply_enu_ned(
+    const cv::Vec3d& tvec,
+    const tf2::Quaternion& quat) const {
+
+    Eigen::Quaterniond eq(quat.w(), quat.x(), quat.y(), quat.z());
+    const Eigen::Quaterniond R_enu_ned = Eigen::Quaterniond(
+        vortex::utils::math::enu_ned_rotation(Eigen::Quaterniond::Identity()));
+    eq = (eq * R_enu_ned).normalized();
+    const tf2::Quaternion q_ned(eq.x(), eq.y(), eq.z(), eq.w());
+
+    return {tvec, q_ned};
 }
 
 tf2::Quaternion ArucoDetectorNode::rvec_to_quat(const cv::Vec3d& rvec) {
