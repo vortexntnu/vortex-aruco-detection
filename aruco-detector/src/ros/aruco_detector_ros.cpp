@@ -225,9 +225,9 @@ void ArucoDetectorNode::imageCallback(
 
         if (valid > 0) {
             auto board_quat = rvec_to_quat(board_rvec);
-            auto [tvec_out, quat_out] = enu_ned_rotation_
-                ? apply_enu_ned(board_tvec, board_quat)
-                : std::make_pair(board_tvec, board_quat);
+            auto [tvec_out, quat_out] =
+                enu_ned_rotation_ ? apply_enu_ned(board_tvec, board_quat)
+                                  : std::make_pair(board_tvec, board_quat);
             geometry_msgs::msg::PoseStamped pose_msg =
                 cv_pose_to_ros_pose_stamped(tvec_out, quat_out, msg->header);
             pose_msg.header.frame_id =
@@ -286,9 +286,10 @@ void ArucoDetectorNode::imageCallback(
         const cv::Vec3d& tvec = tvecs[i];
         tf2::Quaternion quat = rvec_to_quat(rvec);
         auto [tvec_out, quat_out] = enu_ned_rotation_
-            ? apply_enu_ned(tvec, quat)
-            : std::make_pair(tvec, quat);
-        auto pose_msg = cv_pose_to_ros_pose_stamped(tvec_out, quat_out, msg->header);
+                                        ? apply_enu_ned(tvec, quat)
+                                        : std::make_pair(tvec, quat);
+        auto pose_msg =
+            cv_pose_to_ros_pose_stamped(tvec_out, quat_out, msg->header);
         pose_array.poses.push_back(pose_msg.pose);
 
         vortex_msgs::msg::Landmark landmark;
@@ -337,7 +338,6 @@ void ArucoDetectorNode::imageCallback(
 std::pair<cv::Vec3d, tf2::Quaternion> ArucoDetectorNode::apply_enu_ned(
     const cv::Vec3d& tvec,
     const tf2::Quaternion& quat) const {
-
     Eigen::Quaterniond eq(quat.w(), quat.x(), quat.y(), quat.z());
     const Eigen::Quaterniond R_enu_ned = Eigen::Quaterniond(
         vortex::utils::math::enu_ned_rotation(Eigen::Quaterniond::Identity()));
